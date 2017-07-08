@@ -1,0 +1,2 @@
+# ExcelChildProcessController
+Excel でコマンドラインアプリケーションを呼び出して制御するためのライブラリ。
