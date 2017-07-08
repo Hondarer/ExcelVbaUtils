@@ -1,0 +1,351 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "SimpleQueryFunction"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
+' -----------------------------------------------------------------------------
+' ExcelChildProcessController
+' https://github.com/Hondarer/ExcelChildProcessController
+' -----------------------------------------------------------------------------
+' MIT License
+'
+' Copyright (c) 2017 Tetsuo Honda
+' t-honda@hondarer-soft.com
+'
+' Permission is hereby granted, free of charge, to any person obtaining a copy
+' of this software and associated documentation files (the "Software"), to deal
+' in the Software without restriction, including without limitation the rights
+' to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+' copies of the Software, and to permit persons to whom the Software is
+' furnished to do so, subject to the following conditions:
+'
+' The above copyright notice and this permission notice shall be included in all
+' copies or substantial portions of the Software.
+'
+' THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+' IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+' FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+' AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+' LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+' OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+' SOFTWARE.
+'
+' 以下に定める条件に従い、本ソフトウェアおよび関連文書のファイル
+' （以下「ソフトウェア」）の複製を取得するすべての人に対し、ソフトウェアを
+' 無制限に扱うことを無償で許可します。これには、ソフトウェアの複製を使用、複写、
+' 変更、結合、掲載、頒布、サブライセンス、および/または販売する権利、
+' およびソフトウェアを提供する相手に同じことを許可する権利も無制限に含まれます。
+'
+' 上記の著作権表示および本許諾表示を、ソフトウェアのすべての複製または重要な
+' 部分に記載するものとします。
+'
+' ソフトウェアは「現状のまま」で、明示であるか暗黙であるかを問わず、
+' 何らの保証もなく提供されます。
+' ここでいう保証とは、商品性、特定の目的への適合性、および権利非侵害についての
+' 保証も含みますが、それに限定されるものではありません。
+' 作者または著作権者は、契約行為、不法行為、またはそれ以外であろうと、
+' ソフトウェアに起因または関連し、あるいはソフトウェアの使用またはその他の
+' 扱いによって生じる一切の請求、損害、その他の義務について何らの責任も負わない
+' ものとします。
+'
+' -----------------------------------------------------------------------------
+'
+' データベースからの値取得簡易サンプル
+'
+' -----------------------------------------------------------------------------
+
+Implements IProcessControlFunctions
+
+Private Const IDLE_TIMEOUT = 60& * 1000 ' [ms]
+
+Dim controller As New ProcessController
+
+Public isError As Boolean
+Public errorDescription As String
+
+' データ受信中かどうかを保持します。
+Dim dataReceiving As Boolean
+
+Dim records As Long
+Dim columns As Long
+Dim columnNames() As String
+
+' 結果を保持します。
+Dim result() As Variant
+
+Dim username_ As String
+Dim password_ As String
+Dim tlsname_ As String
+Dim from_ As String
+Dim where_ As String
+Dim orderby_ As String
+
+' -----------------------------------------------------------------------------
+' ユーザー名を取得します。
+' -----------------------------------------------------------------------------
+Property Get Username() As String
+    Username = username_
+End Property
+' -----------------------------------------------------------------------------
+' ユーザー名を設定します。
+' -----------------------------------------------------------------------------
+Property Let Username(username__ As String)
+    username_ = username__
+End Property
+
+' -----------------------------------------------------------------------------
+' パスワードを設定します。
+' -----------------------------------------------------------------------------
+Property Let Password(password__ As String)
+    password_ = password__
+End Property
+
+' -----------------------------------------------------------------------------
+' ネットサービス名を取得します。
+' -----------------------------------------------------------------------------
+Property Get Tlsname() As String
+    Tlsname = tlsname_
+End Property
+' -----------------------------------------------------------------------------
+' ネットサービス名を設定します。
+' -----------------------------------------------------------------------------
+Property Let Tlsname(tlsname__ As String)
+    tlsname_ = tlsname__
+End Property
+
+' -----------------------------------------------------------------------------
+' from 句を取得します。
+' -----------------------------------------------------------------------------
+Property Get From() As String
+    From = from_
+End Property
+' -----------------------------------------------------------------------------
+' from 句を設定します。
+' -----------------------------------------------------------------------------
+Property Let From(from__ As String)
+    from_ = from__
+End Property
+
+' -----------------------------------------------------------------------------
+' where 句を取得します。
+' -----------------------------------------------------------------------------
+Property Get Where() As String
+    Where = where_
+End Property
+' -----------------------------------------------------------------------------
+' where 句を設定します。
+' -----------------------------------------------------------------------------
+Property Let Where(where__ As String)
+    where_ = where__
+End Property
+
+' -----------------------------------------------------------------------------
+' order by 句を取得します。
+' -----------------------------------------------------------------------------
+Property Get Orderby() As String
+    Orderby = orderby_
+End Property
+' -----------------------------------------------------------------------------
+' order by 句を設定します。
+' -----------------------------------------------------------------------------
+Property Let Orderby(orderby__ As String)
+    orderby_ = orderby__
+End Property
+
+' -----------------------------------------------------------------------------
+' 新しいインスタンスを初期化します。
+' -----------------------------------------------------------------------------
+Private Sub Class_Initialize()
+    ReDim columnNames(0)
+End Sub
+
+' -----------------------------------------------------------------------------
+' 列を追加します。
+' -----------------------------------------------------------------------------
+Public Sub AddColumns(columnName As String)
+
+    If columns = 0 Then
+        columnNames(0) = columnName
+    Else
+        ReDim Preserve columnNames(columns)
+        columnNames(columns) = columnName
+    End If
+    
+    columns = columns + 1
+
+End Sub
+
+' -----------------------------------------------------------------------------
+' 機能を実行します。
+' -----------------------------------------------------------------------------
+Public Function Execute() As Long
+    ' [username]/[passowrd]@[tlsname]
+    Execute = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, False, Me)
+End Function
+
+' -----------------------------------------------------------------------------
+' 値を返します。
+' -----------------------------------------------------------------------------
+Public Function GetResult(record As Long, column As Long) As Variant
+    GetResult = result(column, record)
+End Function
+
+' -----------------------------------------------------------------------------
+' 行数を返します。列名を示す行は含まれません。
+' -----------------------------------------------------------------------------
+Public Function GetRecordsCount() As Long
+    GetRecordsCount = records
+End Function
+
+' -----------------------------------------------------------------------------
+' 列数を返します。
+' -----------------------------------------------------------------------------
+Public Function GetColumnsCount() As Long
+    GetColumnsCount = columns
+End Function
+
+' -----------------------------------------------------------------------------
+' SQL 文字列を生成します。
+' -----------------------------------------------------------------------------
+Private Function GetSqlSelectString() As String
+    
+    Dim column As Long
+    
+    GetSqlSelectString = "select "
+    
+    For column = 0 To columns - 1
+    
+        GetSqlSelectString = GetSqlSelectString & columnNames(column)
+        
+        If column < (columns - 1) Then
+            GetSqlSelectString = GetSqlSelectString & " || '" & vbTab & "' || "
+        End If
+        
+    Next
+
+    GetSqlSelectString = GetSqlSelectString & " from " & from_
+        
+    If where_ <> "" Then
+        GetSqlSelectString = GetSqlSelectString & " where " & where_
+    End If
+
+    If orderby_ <> "" Then
+        GetSqlSelectString = GetSqlSelectString & " order by " & orderby_
+    Else
+        GetSqlSelectString = GetSqlSelectString & " order by ROWID"
+    End If
+    
+    GetSqlSelectString = GetSqlSelectString & ";"
+    
+    Debug.Print GetSqlSelectString
+    
+End Function
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスと接続された際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnConnected(sender As ProcessController)
+    
+    ' 操作の予約
+    sender.SendLineToStdin "set linesize 32767"
+    sender.SendLineToStdin "set pagesize 0"
+    sender.SendLineToStdin "set feedback off"
+    
+    sender.SendLineToStdin GetSqlSelectString()
+    sender.SendLineToStdin "exit"
+    
+    ' 列名を結果に注入する
+    Dim column As Long
+    ReDim Preserve result(columns - 1, 0)
+    For column = 0 To columns - 1
+        result(column, 0) = columnNames(column)
+    Next
+
+    ' タイムアウトを設定
+    Call sender.SetIdleTimeoutMilliseconds(IDLE_TIMEOUT)
+
+End Sub
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスとの通信が長い時間行われなかった際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnDeepIdle(sender As ProcessController)
+    sender.RequestTerminate EXIT_FAILURE
+    MsgBox "Oracle 操作がタイムアウトしました。", Buttons:=vbCritical, Title:="エラー"
+End Sub
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスが終了した際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnDisconnected(sender As ProcessController)
+End Sub
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスが短時間通信をしなかった際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnIdle(sender As ProcessController, linestring As String)
+End Sub
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスの標準エラー出力に 1 行出力された際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnRecieveLineFromStderr(sender As ProcessController, linestring As String)
+    Debug.Print "! " & linestring
+End Sub
+
+' -----------------------------------------------------------------------------
+' 対象のプロセスの標準出力に 1 行出力された際に発生します。
+' -----------------------------------------------------------------------------
+Private Sub IProcessControlFunctions_OnRecieveLineFromStdout(sender As ProcessController, linestring As String)
+
+    ' エラーが発生した場合はその内容を保持して、プログラムを終了させる
+    If linestring = "ERROR:" Then
+        isError = True
+        sender.RequestTerminate EXIT_FAILURE
+    ElseIf isError = True And errorDescription = "" Then
+        errorDescription = linestring
+        MsgBox "Oracle にてエラーが発生しました。" & vbCrLf & errorDescription, Buttons:=vbCritical, Title:="エラー"
+    End If
+
+'    ' デバッグ用
+'    Debug.Print linestring
+
+    ' プロンプトからプロンプトまでを、データ部として扱う判定処理
+    If Left(linestring, 5) = "SQL> " Then
+        If dataReceiving = False Then
+            dataReceiving = True
+            
+            ' 1 行目のデータの前に付くゴミの排除
+            Do While Left(linestring, 5) = "SQL> "
+                 linestring = Mid(linestring, 6)
+            Loop
+        Else
+            dataReceiving = False
+        End If
+    End If
+    
+    ' データ受信中の処理
+    If dataReceiving = True Then
+    
+        Dim column As Long
+        Dim data() As String
+        data = Split(linestring, vbTab)
+        
+'        Debug.Print "> " & data(0) & " / " & data(1)
+
+        records = records + 1
+        ReDim Preserve result(columns - 1, records)
+        
+        For column = 0 To columns - 1
+            result(column, records) = data(column)
+        Next
+        
+    End If
+    
+End Sub
+
