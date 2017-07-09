@@ -83,7 +83,7 @@ End Sub
 ' 対象のプロセスとの通信が長い時間行われなかった際に発生します。
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnDeepIdle(sender As ProcessController)
-    sender.RequestTerminate EXIT_FAILURE
+    Call sender.RequestTerminate(EXIT_FAILURE)
 End Sub
 
 ' -----------------------------------------------------------------------------

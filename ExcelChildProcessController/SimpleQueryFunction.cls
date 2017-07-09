@@ -296,7 +296,7 @@ Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     Next
 
     ' タイムアウトを設定
-    Call sender.SetIdleTimeoutMilliseconds(queryTimeout_)
+    Call sender.SetDeepIdleTimeoutMilliseconds(queryTimeout_)
 
 End Sub
 
@@ -304,8 +304,8 @@ End Sub
 ' 対象のプロセスとの通信が長い時間行われなかった際に発生します。
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnDeepIdle(sender As ProcessController)
-    sender.RequestTerminate EXIT_FAILURE
-    MsgBox "Oracle 操作がタイムアウトしました。", Buttons:=vbCritical, Title:="エラー"
+    Call sender.RequestTerminate(EXIT_FAILURE)
+    Call MsgBox("Oracle 操作がタイムアウトしました。", Buttons:=vbCritical, Title:="エラー")
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -338,7 +338,7 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
     ElseIf isError = True And errorDescription = "" Then
         errorDescription = recvOutString
         Debug.Print "Eror SimpleQueryFunction: " & errorDescription
-        MsgBox "Oracle にてエラーが発生しました。" & vbCrLf & errorDescription, Buttons:=vbCritical, Title:="エラー"
+        Call MsgBox("Oracle にてエラーが発生しました。" & vbCrLf & errorDescription, Buttons:=vbCritical, Title:="エラー")
         
         ' データを削除する
         ReDim Preserve result(columns - 1, 0)

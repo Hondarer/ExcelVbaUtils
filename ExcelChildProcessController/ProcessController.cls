@@ -290,7 +290,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     ' プロセス起動
     If CreateProcess(vbNullString, commandLine, ByVal 0&, ByVal 0&, 1&, _
         NORMAL_PRIORITY_CLASS, ByVal 0&, ThisWorkbook.Path, udtStartInfo, udtProcInfo) = 0 Then
-        MsgBox "プロセスの生成に失敗しました。エラーコード:" & Err.LastDllError & vbCrLf & commandLine, Buttons:=vbCritical, Title:="エラー"
+        Call MsgBox("プロセスの生成に失敗しました。エラーコード:" & Err.LastDllError & vbCrLf & commandLine, Buttons:=vbCritical, Title:="エラー")
         GoTo Error
     End If
     
@@ -597,7 +597,7 @@ End Function
 ' -----------------------------------------------------------------------------
 Private Sub Class_Terminate()
 
-'    Debug.Print "ProcessController Terminate"
+'    Debug.Print "Info ProcessController: terminate."
 
     ' ハンドルを閉じる
     CloseHandle udtProcInfo.hThread
