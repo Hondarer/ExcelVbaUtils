@@ -59,9 +59,9 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-Implements IProcessControlFunctions
+Implements IProcessControlCallbacks
 
-Private Const IDLE_TIMEOUT = 60& * 1000 ' [ms]
+Private Const QUERY_TIMEOUT = 60& * 1000& ' [ms]
 
 Dim controller As New ProcessController
 
@@ -84,6 +84,8 @@ Dim tlsname_ As String
 Dim from_ As String
 Dim where_ As String
 Dim orderby_ As String
+
+Dim queryTimeout_ As Long
 
 ' -----------------------------------------------------------------------------
 ' ユーザー名を取得します。
@@ -158,10 +160,29 @@ Property Let Orderby(orderby__ As String)
 End Property
 
 ' -----------------------------------------------------------------------------
+' 問い合わせタイムアウト[ms]を取得します。
+' -----------------------------------------------------------------------------
+Property Get QueryTimeoutMilliSeconds() As Long
+    QueryTimeoutMilliSeconds = queryTimeout_
+End Property
+' -----------------------------------------------------------------------------
+' 問い合わせタイムアウト[ms]を設定します。
+' -----------------------------------------------------------------------------
+Property Let QueryTimeoutMilliSeconds(queryTimeout__ As Long)
+    queryTimeout_ = queryTimeout__
+End Property
+
+' -----------------------------------------------------------------------------
 ' 新しいインスタンスを初期化します。
 ' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
-    ReDim columnNames(0)
+
+    ' 列の初期化
+    Call ClearColumns
+    
+    ' タイムアウトのデフォルト値を設定
+    queryTimeout_ = QUERY_TIMEOUT
+    
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -181,11 +202,21 @@ Public Sub AddColumns(columnName As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
+' 列を初期化します。
+' -----------------------------------------------------------------------------
+Public Sub ClearColumns()
+
+    columns = 0
+    ReDim columnNames(0)
+
+End Sub
+
+' -----------------------------------------------------------------------------
 ' 機能を実行します。
 ' -----------------------------------------------------------------------------
 Public Function Execute() As Long
     ' [username]/[passowrd]@[tlsname]
-    Execute = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, False, Me)
+    Execute = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, Me)
 End Function
 
 ' -----------------------------------------------------------------------------
@@ -242,14 +273,12 @@ Private Function GetSqlSelectString() As String
     
     GetSqlSelectString = GetSqlSelectString & ";"
     
-    Debug.Print GetSqlSelectString
-    
 End Function
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスと接続された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnConnected(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     
     ' 操作の予約
     sender.SendLineToStdin "set linesize 32767"
@@ -267,14 +296,14 @@ Private Sub IProcessControlFunctions_OnConnected(sender As ProcessController)
     Next
 
     ' タイムアウトを設定
-    Call sender.SetIdleTimeoutMilliseconds(IDLE_TIMEOUT)
+    Call sender.SetIdleTimeoutMilliseconds(queryTimeout_)
 
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスとの通信が長い時間行われなかった際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnDeepIdle(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnDeepIdle(sender As ProcessController)
     sender.RequestTerminate EXIT_FAILURE
     MsgBox "Oracle 操作がタイムアウトしました。", Buttons:=vbCritical, Title:="エラー"
 End Sub
@@ -282,47 +311,52 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスが終了した際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnDisconnected(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnDisconnected(sender As ProcessController)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスが短時間通信をしなかった際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnIdle(sender As ProcessController, linestring As String)
+Private Sub IProcessControlCallbacks_OnIdle(sender As ProcessController, lineString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準エラー出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnRecieveLineFromStderr(sender As ProcessController, linestring As String)
-    Debug.Print "! " & linestring
+Private Sub IProcessControlCallbacks_OnRecieveLineFromStderr(sender As ProcessController, recvErrString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnRecieveLineFromStdout(sender As ProcessController, linestring As String)
+Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessController, recvOutString As String)
 
     ' エラーが発生した場合はその内容を保持して、プログラムを終了させる
-    If linestring = "ERROR:" Then
+    If (recvOutString = "ERROR:") Or (Right(recvOutString, 12) = "エラーが発生しました。:") Then
         isError = True
         sender.RequestTerminate EXIT_FAILURE
     ElseIf isError = True And errorDescription = "" Then
-        errorDescription = linestring
+        errorDescription = recvOutString
+        Debug.Print "Eror SimpleQueryFunction: " & errorDescription
         MsgBox "Oracle にてエラーが発生しました。" & vbCrLf & errorDescription, Buttons:=vbCritical, Title:="エラー"
+        
+        ' データを削除する
+        ReDim Preserve result(columns - 1, 0)
+        records = 0
+        
+        Exit Sub
+    ElseIf isError = True Then
+        Exit Sub
     End If
 
-'    ' デバッグ用
-'    Debug.Print linestring
-
     ' プロンプトからプロンプトまでを、データ部として扱う判定処理
-    If Left(linestring, 5) = "SQL> " Then
+    If Left(recvOutString, 5) = "SQL> " Then
         If dataReceiving = False Then
             dataReceiving = True
             
             ' 1 行目のデータの前に付くゴミの排除
-            Do While Left(linestring, 5) = "SQL> "
-                 linestring = Mid(linestring, 6)
+            Do While Left(recvOutString, 5) = "SQL> "
+                 recvOutString = Mid(recvOutString, 6)
             Loop
         Else
             dataReceiving = False
@@ -334,16 +368,21 @@ Private Sub IProcessControlFunctions_OnRecieveLineFromStdout(sender As ProcessCo
     
         Dim column As Long
         Dim data() As String
-        data = Split(linestring, vbTab)
+        data = Split(recvOutString, vbTab)
         
-'        Debug.Print "> " & data(0) & " / " & data(1)
+        ' エラー文字列などではなく、データ部であること
+        If UBound(data) = (columns - 1) Then
+        
+'           Debug.Print "> " & data(0) & " / " & data(1)
 
-        records = records + 1
-        ReDim Preserve result(columns - 1, records)
+            records = records + 1
+            ReDim Preserve result(columns - 1, records)
+            
+            For column = 0 To columns - 1
+                result(column, records) = data(column)
+            Next
         
-        For column = 0 To columns - 1
-            result(column, records) = data(column)
-        Next
+        End If
         
     End If
     

@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "IProcessControlFunctions"
+Attribute VB_Name = "IProcessControlCallbacks"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
@@ -80,18 +80,18 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスが短時間通信をしなかった際に発生します。
 ' -----------------------------------------------------------------------------
-Sub OnIdle(sender As ProcessController, linestring As String)
+Sub OnIdle(sender As ProcessController, lineString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準エラー出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Sub OnRecieveLineFromStderr(sender As ProcessController, linestring As String)
+Sub OnRecieveLineFromStderr(sender As ProcessController, recvErrString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Sub OnRecieveLineFromStdout(sender As ProcessController, linestring As String)
+Sub OnRecieveLineFromStdout(sender As ProcessController, recvOutString As String)
 End Sub
 

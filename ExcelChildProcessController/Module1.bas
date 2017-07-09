@@ -54,7 +54,7 @@ Public Sub Sample1()
 
     Dim func As New SampleFunction1
     
-    Debug.Print func.Execute()
+    Call func.Execute
     
 End Sub
 
@@ -65,7 +65,7 @@ Public Sub Sample2()
 
     Dim func As New SampleFunction2
     
-    Debug.Print func.Execute()
+    Call func.Execute
     
 End Sub
 
@@ -77,7 +77,7 @@ Public Sub SimpleQueryFunctionSample()
     Dim func As New SimpleQueryFunction
     
     ' 設定値
-    ' シートから取るなりお好きに
+    ' シートから取るなり定数で与えるなりお好きに
     func.Username = "hr"
     func.Password = "tiger"
     func.Tlsname = "XE"
@@ -94,10 +94,17 @@ Public Sub SimpleQueryFunctionSample()
 '    func.Where = "REGION_ID = 4"
     
     ' order by 句
+    ' 明示的に指定しない場合は、フレームワークにより ROWID で order される。
+    ' テーブル関数など ROWID が存在しない場合は必ず指定すること。
     func.Orderby = "REGION_ID"
     
+'    ' タイムアウトの設定
+'    ' 明示的に指定しない場合は、フレームワークにより
+'    ' デフォルトのタイムアウト(60 秒)が指定される。単位は[ms]。
+'    func.QueryTimeoutMilliSeconds = 60& * 1000&
+    
     ' 問い合わせ実行
-    Debug.Print func.Execute()
+    Call func.Execute
     
     ' セルに書き出すには以下のようにする
     ' ヘッダ行があるため、行の数はデータ + 1 となる、注意 !

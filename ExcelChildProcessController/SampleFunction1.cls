@@ -59,7 +59,7 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-Implements IProcessControlFunctions
+Implements IProcessControlCallbacks
 
 Dim controller As New ProcessController
 
@@ -67,13 +67,13 @@ Dim controller As New ProcessController
 ' 機能を実行します。
 ' -----------------------------------------------------------------------------
 Public Function Execute() As Long
-    Execute = controller.ExecuteProcess("cmd.exe", False, Me)
+    Execute = controller.ExecuteProcess("cmd.exe", Me)
 End Function
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスと接続された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnConnected(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     Call sender.SendLineToStdin("dir")
     Call sender.SendLineToStdin("fff")
     Call sender.SendLineToStdin("exit")
@@ -82,32 +82,30 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスとの通信が長い時間行われなかった際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnDeepIdle(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnDeepIdle(sender As ProcessController)
     sender.RequestTerminate EXIT_FAILURE
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスが終了した際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnDisconnected(sender As ProcessController)
+Private Sub IProcessControlCallbacks_OnDisconnected(sender As ProcessController)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスが短時間通信をしなかった際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnIdle(sender As ProcessController, linestring As String)
+Private Sub IProcessControlCallbacks_OnIdle(sender As ProcessController, lineString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準エラー出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnRecieveLineFromStderr(sender As ProcessController, linestring As String)
-    Debug.Print "! " & linestring
+Private Sub IProcessControlCallbacks_OnRecieveLineFromStderr(sender As ProcessController, recvErrString As String)
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 対象のプロセスの標準出力に 1 行出力された際に発生します。
 ' -----------------------------------------------------------------------------
-Private Sub IProcessControlFunctions_OnRecieveLineFromStdout(sender As ProcessController, linestring As String)
-    Debug.Print linestring
+Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessController, recvOutString As String)
 End Sub

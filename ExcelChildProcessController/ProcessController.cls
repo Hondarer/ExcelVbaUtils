@@ -80,9 +80,9 @@ Dim ov1 As OVERLAPPED
 Dim ov2 As OVERLAPPED
 Dim ov3 As OVERLAPPED
 
-Private Const POLLING_MILLISEC = 50 ' [ms]
-Private Const DEFAULT_IDLE_TIMEOUTMILLISEC = 500 ' [ms]
-Private Const DEFAULT_DEEPIDLE_TIMEOUTMILLISEC = 60& * 1000 ' [ms]
+Private Const POLLING_MILLISEC = 50& ' [ms]
+Private Const DEFAULT_IDLE_TIMEOUTMILLISEC = 500& ' [ms]
+Private Const DEFAULT_DEEPIDLE_TIMEOUTMILLISEC = 60& * 1000& ' [ms]
 
 Dim idleCount As Long
 Dim idleTimeoutCount As Long
@@ -116,6 +116,8 @@ Public Function SendTextToStdin(sendstring As String) As Boolean
         Exit Function
     End If
     
+    Debug.Print "StdI " & sendstring; ' 改行しない
+    
     writeBuffer = StrConv(sendstring, vbFromUnicode)
     If WriteFile(hInWrite, writeBuffer(0), UBound(writeBuffer) + 1, dwWritten, ov1) = 0 Then
         SendTextToStdin = False
@@ -131,7 +133,7 @@ End Function
 ' -----------------------------------------------------------------------------
 Public Function SendLineToStdin(sendstring As String) As Boolean
 
-    SendLineToStdin = SendTextToStdin(sendstring + vbCrLf)
+    SendLineToStdin = SendTextToStdin(sendstring & vbCrLf)
     
 End Function
 
@@ -184,7 +186,10 @@ Public Function RequestTerminate(uExitCode As Long) As Boolean
         Exit Function
     End If
     
+    Debug.Print "Info ProcessController: Child process(pid=" & udtProcInfo.dwProcessId & ") request stop with code=" & uExitCode & "."
+    
     If TerminateProcess(udtProcInfo.hProcess, uExitCode) = 0 Then
+        Debug.Print "Warn ProcessController: Child process(pid=" & udtProcInfo.dwProcessId & ") stop failed(in general it has already terminated)."
         RequestTerminate = False
         Exit Function
     End If
@@ -196,7 +201,7 @@ End Function
 ' -----------------------------------------------------------------------------
 ' プロセスを実行します。
 ' -----------------------------------------------------------------------------
-Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, func As IProcessControlFunctions) As Long
+Public Function ExecuteProcess(commandLine As String, func As IProcessControlCallbacks) As Long
 
     ' パイプ通信に必要な構造体
     Dim sa As SECURITY_ATTRIBUTES
@@ -278,11 +283,9 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
 '    udtStartInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE)
     udtStartInfo.dwFlags = STARTF_USESTDHANDLES
     
-    ' ウインドウを消去する場合は、スタイルを設定
-    If showWindow = False Then
-        udtStartInfo.dwFlags = udtStartInfo.dwFlags Or STARTF_USESHOWWINDOW
-        udtStartInfo.wShowWindow = SW_HIDE
-    End If
+    ' ウインドウを消去する
+    udtStartInfo.wShowWindow = SW_HIDE
+    udtStartInfo.dwFlags = udtStartInfo.dwFlags Or STARTF_USESHOWWINDOW
     
     ' プロセス起動
     If CreateProcess(vbNullString, commandLine, ByVal 0&, ByVal 0&, 1&, _
@@ -291,13 +294,15 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
         GoTo Error
     End If
     
+    Debug.Print "Info ProcessController: Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") started up."
+    
     ' タイムアウトの設定
     Call ResetIdleTimeoutMilliseconds
     Call ResetDeepIdleTimeoutMilliseconds
    
     ' 接続完了コールバックを呼び出す
     If Not func Is Nothing Then
-        func.OnConnected Me
+        Call func.OnConnected(Me)
     End If
     
     ' メインループ
@@ -331,7 +336,7 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
                         ReDim Preserve recvBuffer1(UBound(recvBuffer1) + dwRead)
                     End If
                     
-                    CopyMemory recvBuffer1(nextRecv1Index), recvBuffer(0), dwRead
+                    Call CopyMemory(recvBuffer1(nextRecv1Index), recvBuffer(0), dwRead)
                 
                     ' 1 次バッファから順次、2 次バッファに詰めなおす
                     ' CR および LF は、2 次バッファには詰めない
@@ -353,9 +358,11 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
                             ' コールバック実施
                             If Not func Is Nothing Then
                                 If recvBuffer2Empty = True Then
-                                    func.OnRecieveLineFromStdout Me, ""
+                                    Debug.Print "StdO "
+                                    Call func.OnRecieveLineFromStdout(Me, "")
                                 Else
-                                    func.OnRecieveLineFromStdout Me, StrConv(recvBuffer2, vbUnicode)
+                                    Debug.Print "StdO " & StrConv(recvBuffer2, vbUnicode)
+                                    Call func.OnRecieveLineFromStdout(Me, StrConv(recvBuffer2, vbUnicode))
                                 End If
                             End If
                             ReDim recvBuffer2(0)
@@ -465,9 +472,11 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
                             ' コールバック実施
                             If Not func Is Nothing Then
                                 If errBuffer2Empty = True Then
-                                    func.OnRecieveLineFromStderr Me, ""
+                                    Debug.Print "StdE "
+                                    Call func.OnRecieveLineFromStderr(Me, "")
                                 Else
-                                    func.OnRecieveLineFromStderr Me, StrConv(errBuffer2, vbUnicode)
+                                    Debug.Print "StdE " & StrConv(errBuffer2, vbUnicode)
+                                    Call func.OnRecieveLineFromStderr(Me, StrConv(errBuffer2, vbUnicode))
                                 End If
                             End If
                             ReDim errBuffer2(0)
@@ -509,13 +518,15 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
         
             ' データがあれば出力
             If recvBuffer2Empty <> True Then
-                func.OnRecieveLineFromStdout Me, StrConv(recvBuffer2, vbUnicode)
+                Debug.Print "StdO " & StrConv(recvBuffer2, vbUnicode)
+                Call func.OnRecieveLineFromStdout(Me, StrConv(recvBuffer2, vbUnicode))
             End If
             ReDim recvBuffer2(0)
             recvBuffer2Empty = True
             
             If errBuffer2Empty <> True Then
-                func.OnRecieveLineFromStderr Me, StrConv(errBuffer2, vbUnicode)
+                Debug.Print "StdE " & StrConv(errBuffer2, vbUnicode)
+                Call func.OnRecieveLineFromStderr(Me, StrConv(errBuffer2, vbUnicode))
             End If
             ReDim errBuffer2(0)
             errBuffer2Empty = True
@@ -534,7 +545,7 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
           
     ' 切断完了コールバックを呼び出す
     If Not func Is Nothing Then
-        func.OnDisconnected Me
+        Call func.OnDisconnected(Me)
     End If
         
     Application.Cursor = xlDefault
@@ -552,11 +563,16 @@ Public Function ExecuteProcess(commandLine As String, showWindow As Boolean, fun
 
     ' 戻り値の設定
     ExecuteProcess = procExitCode
+    
+    Debug.Print "Info ProcessController: Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") has exited. code=" & procExitCode
+    
     Exit Function
 
 ' エラー処理
 Error:
 
+    Debug.Print "Warn ProcessController: Child process(" & commandLine & ") could not be executed with error."
+    
     ' ハンドルを閉じる
     CloseHandle udtProcInfo.hThread
     CloseHandle udtProcInfo.hProcess
