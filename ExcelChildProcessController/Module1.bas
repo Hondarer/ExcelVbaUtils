@@ -88,12 +88,14 @@ Public Sub SimpleQueryFunctionSample()
     Call func.AddColumns("REGION_NAME")
     
     ' from 句
+    ' テーブル関数の場合は、引数まで与える
     func.From = "REGIONS"
     
 '    ' where 句
 '    func.Where = "REGION_ID = 4"
     
     ' order by 句
+    ' asc, desc が指定必要な場合は、ここで与える
     ' 明示的に指定しない場合は、フレームワークにより ROWID で order される。
     ' テーブル関数など ROWID が存在しない場合は必ず指定すること。
     func.Orderby = "REGION_ID"

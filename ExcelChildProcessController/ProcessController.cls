@@ -84,6 +84,9 @@ Private Const POLLING_MILLISEC = 50& ' [ms]
 Private Const DEFAULT_IDLE_TIMEOUTMILLISEC = 500& ' [ms]
 Private Const DEFAULT_DEEPIDLE_TIMEOUTMILLISEC = 60& * 1000& ' [ms]
 
+' パイプ通信のバッファサイズを表します。
+Private Const BUFFER_LIMIT_LENGTH = 4096&
+
 Dim idleCount As Long
 Dim idleTimeoutCount As Long
 Dim deepIdleCount As Long
@@ -203,10 +206,15 @@ End Function
 ' -----------------------------------------------------------------------------
 Public Function ExecuteProcess(commandLine As String, func As IProcessControlCallbacks) As Long
 
-    ' パイプ通信に必要な構造体
     Dim sa As SECURITY_ATTRIBUTES
+
+    Dim udtStartInfo As STARTUPINFO
+
+    Dim procExitCode As Long
     
     Dim dwRead As Long
+    
+    Dim strBuffer As String
     
     ReDim recvBuffer1(0)
     ReDim recvBuffer2(0)
@@ -223,11 +231,6 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     Dim nextRecv1Index As Long
     Dim sjisFirstByte As Byte
     Dim processRecv1Index As Long
-
-    ' CreateProcess API に必要な構造体
-    Dim udtStartInfo As STARTUPINFO
-
-    Dim procExitCode As Long
 
     ' セキュリティディスクリプタの設定
     Call ZeroMemory(sa, Len(sa))
@@ -311,6 +314,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     
     Do
     
+        Dim hasData As Boolean
+        hasData = False
+    
         If GetExitCodeProcess(udtProcInfo.hProcess, procExitCode) = 0 Then
             ' 終了コード取得異常
             GoTo Error
@@ -320,6 +326,11 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
         If PeekNamedPipe(hOutRead, 0&, 0, 0&, dwRead, ByVal 0) <> 0 Then
             If (dwRead > 0) Then
                 ' データがある
+                
+                ' 未読み取りデータが多い場合は、クリップしながら処理する
+                If dwRead > BUFFER_LIMIT_LENGTH Then
+                    dwRead = BUFFER_LIMIT_LENGTH
+                End If
                 
                 ' 標準出力からデータを読み取る
                 ReDim recvBuffer(dwRead - 1) As Byte
@@ -361,8 +372,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                                     Debug.Print "StdO "
                                     Call func.OnRecieveLineFromStdout(Me, "")
                                 Else
-                                    Debug.Print "StdO " & StrConv(recvBuffer2, vbUnicode)
-                                    Call func.OnRecieveLineFromStdout(Me, StrConv(recvBuffer2, vbUnicode))
+                                    strBuffer = StrConv(recvBuffer2, vbUnicode)
+                                    Debug.Print "StdO " & strBuffer
+                                    Call func.OnRecieveLineFromStdout(Me, strBuffer)
                                 End If
                             End If
                             ReDim recvBuffer2(0)
@@ -386,13 +398,15 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                         recvBuffer1Empty = True
                     End If
                 
-                Else
-                    ' API 呼出異常
-                    GoTo Error
-                End If
+                    idleCount = 0
+                    deepIdleCount = 0
+                    hasData = True
                 
-                idleCount = 0
-                deepIdleCount = 0
+                Else
+                    ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+'                    ' API 呼出異常
+'                    GoTo Error
+                End If
             Else
                 ' データがない
                 
@@ -426,14 +440,20 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
 
             End If
         Else
-            ' API 呼出異常
-            GoTo Error
+            ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+'            ' API 呼出異常
+'            GoTo Error
         End If
 
         ' 標準エラー出力からデータが読めることを確認する
         If PeekNamedPipe(hErrRead, 0&, 0, 0&, dwRead, ByVal 0) <> 0 Then
             If (dwRead > 0) Then
                 ' データがある
+                
+                ' 未読み取りデータが多い場合は、クリップしながら処理する
+                If dwRead > BUFFER_LIMIT_LENGTH Then
+                    dwRead = BUFFER_LIMIT_LENGTH
+                End If
                 
                 ' 標準エラー出力からデータを読み取る
                 ReDim errBuffer(dwRead - 1) As Byte
@@ -475,8 +495,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                                     Debug.Print "StdE "
                                     Call func.OnRecieveLineFromStderr(Me, "")
                                 Else
-                                    Debug.Print "StdE " & StrConv(errBuffer2, vbUnicode)
-                                    Call func.OnRecieveLineFromStderr(Me, StrConv(errBuffer2, vbUnicode))
+                                    strBuffer = StrConv(errBuffer2, vbUnicode)
+                                    Debug.Print "StdE " & strBuffer
+                                    Call func.OnRecieveLineFromStderr(Me, strBuffer)
                                 End If
                             End If
                             ReDim errBuffer2(0)
@@ -500,33 +521,39 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                         errBuffer1Empty = True
                     End If
                 
-                Else
-                    ' API 呼出異常
-                    GoTo Error
-                End If
+                    idleCount = 0
+                    deepIdleCount = 0
+                    hasData = True
                 
-                idleCount = 0
-                deepIdleCount = 0
+                Else
+                    ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+'                    ' API 呼出異常
+'                    GoTo Error
+                End If
             End If
         Else
-            ' API 呼出異常
-            GoTo Error
+            ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+'            ' API 呼出異常
+'            GoTo Error
         End If
 
+        ' 読みだすべきデータがパイプから存在せず、かつ
         ' プロセスの終了コードが正しく設定されていたら、ループを終了させる
-        If procExitCode <> STILL_ACTIVE Then
+        If (hasData = False) And (procExitCode <> STILL_ACTIVE) Then
         
             ' データがあれば出力
             If recvBuffer2Empty <> True Then
-                Debug.Print "StdO " & StrConv(recvBuffer2, vbUnicode)
-                Call func.OnRecieveLineFromStdout(Me, StrConv(recvBuffer2, vbUnicode))
+                strBuffer = StrConv(recvBuffer2, vbUnicode)
+                Debug.Print "StdO " & strBuffer
+                Call func.OnRecieveLineFromStdout(Me, strBuffer)
             End If
             ReDim recvBuffer2(0)
             recvBuffer2Empty = True
             
             If errBuffer2Empty <> True Then
-                Debug.Print "StdE " & StrConv(errBuffer2, vbUnicode)
-                Call func.OnRecieveLineFromStderr(Me, StrConv(errBuffer2, vbUnicode))
+                strBuffer = StrConv(errBuffer2, vbUnicode)
+                Debug.Print "StdE " & strBuffer
+                Call func.OnRecieveLineFromStderr(Me, strBuffer)
             End If
             ReDim errBuffer2(0)
             errBuffer2Empty = True

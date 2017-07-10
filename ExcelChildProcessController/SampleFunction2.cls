@@ -103,6 +103,13 @@ End Sub
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnIdle(sender As ProcessController, lineString As String)
 
+    ' プロンプトになっていることを確認する
+    If Right(lineString, 1) <> ">" Then
+        Exit Sub
+    End If
+
+    ' 状態遷移を順次行う
+    ' 都度戻り値を確認して進める方法も考えられるが、サンプルではプロンプトになれば次のコマンドを発行している
     Select Case nowPhase
         Case init
             Call sender.SendLineToStdin("dir")
