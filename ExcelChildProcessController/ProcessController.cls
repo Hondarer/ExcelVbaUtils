@@ -106,6 +106,21 @@ Dim errBuffer2() As Byte ' 2 次バッファ(ラインバッファ)
 Dim errBuffer1Empty As Boolean
 Dim errBuffer2Empty As Boolean
 
+Dim disableIoTrace_ As Boolean
+
+' -----------------------------------------------------------------------------
+' イミディエイト ウインドウへのデバッグ出力無効設定を取得します。
+' -----------------------------------------------------------------------------
+Property Get DisableIoTrace() As Boolean
+    DisableIoTrace = disableIoTrace_
+End Property
+' -----------------------------------------------------------------------------
+' イミディエイト ウインドウへのデバッグ出力無効設定を設定します。
+' -----------------------------------------------------------------------------
+Property Let DisableIoTrace(disableIoTrace__ As Boolean)
+    disableIoTrace_ = disableIoTrace__
+End Property
+
 ' -----------------------------------------------------------------------------
 ' ターゲットの標準入力に文字列を与えます。
 ' -----------------------------------------------------------------------------
@@ -119,7 +134,9 @@ Public Function SendTextToStdin(sendstring As String) As Boolean
         Exit Function
     End If
     
-    Debug.Print "StdI " & sendstring; ' 改行しない
+    If disableIoTrace_ <> True Then
+        Debug.Print "StdI " & sendstring; ' 改行しない
+    End If
     
     writeBuffer = StrConv(sendstring, vbFromUnicode)
     If WriteFile(hInWrite, writeBuffer(0), UBound(writeBuffer) + 1, dwWritten, ov1) = 0 Then
@@ -369,11 +386,15 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                             ' コールバック実施
                             If Not func Is Nothing Then
                                 If recvBuffer2Empty = True Then
-                                    Debug.Print "StdO "
+                                    If disableIoTrace_ <> True Then
+                                        Debug.Print "StdO "
+                                    End If
                                     Call func.OnRecieveLineFromStdout(Me, "")
                                 Else
                                     strBuffer = StrConv(recvBuffer2, vbUnicode)
-                                    Debug.Print "StdO " & strBuffer
+                                    If disableIoTrace_ <> True Then
+                                        Debug.Print "StdO " & strBuffer
+                                    End If
                                     Call func.OnRecieveLineFromStdout(Me, strBuffer)
                                 End If
                             End If
@@ -492,11 +513,15 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                             ' コールバック実施
                             If Not func Is Nothing Then
                                 If errBuffer2Empty = True Then
-                                    Debug.Print "StdE "
+                                    If disableIoTrace_ <> True Then
+                                        Debug.Print "StdE "
+                                    End If
                                     Call func.OnRecieveLineFromStderr(Me, "")
                                 Else
                                     strBuffer = StrConv(errBuffer2, vbUnicode)
-                                    Debug.Print "StdE " & strBuffer
+                                    If disableIoTrace_ <> True Then
+                                        Debug.Print "StdE " & strBuffer
+                                    End If
                                     Call func.OnRecieveLineFromStderr(Me, strBuffer)
                                 End If
                             End If
@@ -544,7 +569,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
             ' データがあれば出力
             If recvBuffer2Empty <> True Then
                 strBuffer = StrConv(recvBuffer2, vbUnicode)
-                Debug.Print "StdO " & strBuffer
+                If disableIoTrace_ <> True Then
+                    Debug.Print "StdO " & strBuffer
+                End If
                 Call func.OnRecieveLineFromStdout(Me, strBuffer)
             End If
             ReDim recvBuffer2(0)
@@ -552,7 +579,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
             
             If errBuffer2Empty <> True Then
                 strBuffer = StrConv(errBuffer2, vbUnicode)
-                Debug.Print "StdE " & strBuffer
+                If disableIoTrace_ <> True Then
+                    Debug.Print "StdE " & strBuffer
+                End If
                 Call func.OnRecieveLineFromStderr(Me, strBuffer)
             End If
             ReDim errBuffer2(0)

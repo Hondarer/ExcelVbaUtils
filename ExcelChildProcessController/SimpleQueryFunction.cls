@@ -215,8 +215,14 @@ End Sub
 ' 機能を実行します。
 ' -----------------------------------------------------------------------------
 Public Function Execute() As Long
+    
+    ' 大量データを参照する際には、デバッグ出力による性能低下が無視できないので
+    ' デバッグ出力を無効にする
+    controller.DisableIoTrace = True
+    
     ' [username]/[passowrd]@[tlsname]
     Execute = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, Me)
+    
 End Function
 
 ' -----------------------------------------------------------------------------
