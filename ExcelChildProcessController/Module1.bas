@@ -54,7 +54,7 @@ Public Sub Sample1()
 
     Dim func As New SampleFunction1
     
-    Call func.Execute
+    Debug.Print "戻り値:" & func.Execute
     
 End Sub
 
@@ -65,7 +65,40 @@ Public Sub Sample2()
 
     Dim func As New SampleFunction2
     
-    Call func.Execute
+    Debug.Print "戻り値:" & func.Execute
+    
+End Sub
+
+' -----------------------------------------------------------------------------
+' コマンドプロンプトのサンプル 3 を実行します。
+' -----------------------------------------------------------------------------
+Public Sub Sample3()
+
+    Dim controller As New ProcessController
+    
+    ' コールバックが必要ない場合の直接起動
+    Debug.Print "戻り値:" & controller.ExecuteProcess("cmd.exe /k ver & dir & fff & exit", Nothing)
+    
+End Sub
+
+' -----------------------------------------------------------------------------
+' コマンドプロンプトのサンプル 4 を実行します。
+' -----------------------------------------------------------------------------
+Public Sub Sample4()
+
+    Dim controller As New ProcessController
+    
+    ' コンソール ウインドウでの制御を行う
+    ' 残置した標準入出力のコールバックは実施されない
+    controller.ShowConsoleWindow = True
+    controller.LeaveStdin = True
+    controller.LeaveStdout = True
+    controller.LeaveStderr = True
+    
+    ' タイムアウト監視の無効化
+    Call controller.DisableDeepIdleTimeoutMilliseconds
+    
+    Debug.Print "戻り値:" & controller.ExecuteProcess("cmd.exe /k ver & dir & fff & pause & exit", Nothing)
     
 End Sub
 
@@ -106,7 +139,7 @@ Public Sub SimpleQueryFunctionSample()
 '    func.QueryTimeoutMilliSeconds = 60& * 1000&
     
     ' 問い合わせ実行
-    Call func.Execute
+    Debug.Print "戻り値:" & func.Execute
     
     ' セルに書き出すには以下のようにする
     ' ヘッダ行があるため、行の数はデータ + 1 となる、注意 !
