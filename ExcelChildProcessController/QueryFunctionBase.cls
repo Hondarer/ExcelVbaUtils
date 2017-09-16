@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "SimpleQueryFunction"
+Attribute VB_Name = "QueryFunctionBase"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
@@ -55,15 +55,17 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 '
-' データベースからの値取得簡易サンプル
+' データベースからの値取得サンプルの基底クラス
 '
 ' -----------------------------------------------------------------------------
 
 Implements IProcessControlCallbacks
 
+Private Const DEFAULT_COLUMN_DELIMITER = ","
+
 Private Const QUERY_TIMEOUT = 60& * 1000& ' [ms]
 
-Dim controller As New ProcessController
+Public controller As New ProcessController
 
 Public isError As Boolean
 Public errorDescription As String
@@ -81,11 +83,17 @@ Dim result() As Variant
 Dim username_ As String
 Dim password_ As String
 Dim tlsname_ As String
-Dim from_ As String
-Dim where_ As String
-Dim orderby_ As String
+Dim sql_ As String
+Dim columnDelimiter_ As String
 
 Dim queryTimeout_ As Long
+
+' -----------------------------------------------------------------------------
+' このオブジェクトの IProcessControlCallbacks インターフェースを取得します。
+' -----------------------------------------------------------------------------
+Property Get IProcessControlCallbacks_() As IProcessControlCallbacks
+    Set IProcessControlCallbacks_ = Me
+End Property
 
 ' -----------------------------------------------------------------------------
 ' ユーザー名を取得します。
@@ -121,42 +129,36 @@ Property Let Tlsname(tlsname__ As String)
 End Property
 
 ' -----------------------------------------------------------------------------
-' from 句を取得します。
+' SQL 文字列を取得します。
 ' -----------------------------------------------------------------------------
-Property Get From() As String
-    From = from_
+Property Get sql() As String
+    sql = sql_
 End Property
 ' -----------------------------------------------------------------------------
-' from 句を設定します。
+' SQL 文字列を設定します。
 ' -----------------------------------------------------------------------------
-Property Let From(from__ As String)
-    from_ = from__
-End Property
-
-' -----------------------------------------------------------------------------
-' where 句を取得します。
-' -----------------------------------------------------------------------------
-Property Get Where() As String
-    Where = where_
-End Property
-' -----------------------------------------------------------------------------
-' where 句を設定します。
-' -----------------------------------------------------------------------------
-Property Let Where(where__ As String)
-    where_ = where__
+Property Let sql(sql__ As String)
+    sql_ = sql__
 End Property
 
 ' -----------------------------------------------------------------------------
-' order by 句を取得します。
+' 列区切り文字列を取得します。
 ' -----------------------------------------------------------------------------
-Property Get Orderby() As String
-    Orderby = orderby_
+Property Get ColumnDelimiter() As String
+    ColumnDelimiter = columnDelimiter_
 End Property
 ' -----------------------------------------------------------------------------
-' order by 句を設定します。
+' 列区切り文字列を設定します。
 ' -----------------------------------------------------------------------------
-Property Let Orderby(orderby__ As String)
-    orderby_ = orderby__
+Property Let ColumnDelimiter(columnDelimiter__ As String)
+    columnDelimiter_ = columnDelimiter__
+End Property
+
+' -----------------------------------------------------------------------------
+' 列数を取得します。
+' -----------------------------------------------------------------------------
+Property Get ColumnCount() As Long
+    ColumnCount = columns
 End Property
 
 ' -----------------------------------------------------------------------------
@@ -182,6 +184,9 @@ Private Sub Class_Initialize()
     
     ' タイムアウトのデフォルト値を設定
     queryTimeout_ = QUERY_TIMEOUT
+    
+    ' デフォルトの列区切りを設定
+    columnDelimiter_ = DEFAULT_COLUMN_DELIMITER
     
 End Sub
 
@@ -212,16 +217,30 @@ Public Sub ClearColumns()
 End Sub
 
 ' -----------------------------------------------------------------------------
+' 列名を取得します。
+' -----------------------------------------------------------------------------
+Public Function GetColumnName(column As Long) As String
+    GetColumnName = columnNames(column)
+End Function
+
+' -----------------------------------------------------------------------------
 ' 機能を実行します。
 ' -----------------------------------------------------------------------------
 Public Function Execute() As Long
+    Execute = ExecuteWithCallbackObject(Me)
+End Function
+
+' -----------------------------------------------------------------------------
+' コールバック対象のオブジェクトを指定して機能を実行します。
+' -----------------------------------------------------------------------------
+Public Function ExecuteWithCallbackObject(callbackObject As IProcessControlCallbacks) As Long
     
     ' 大量データを参照する際には、デバッグ出力による性能低下が無視できないので
     ' デバッグ出力を無効にする
     controller.DisableIoTrace = True
     
     ' [username]/[passowrd]@[tlsname]
-    Execute = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, Me)
+    ExecuteWithCallbackObject = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, callbackObject)
     
 End Function
 
@@ -247,51 +266,19 @@ Public Function GetColumnsCount() As Long
 End Function
 
 ' -----------------------------------------------------------------------------
-' SQL 文字列を生成します。
-' -----------------------------------------------------------------------------
-Private Function GetSqlSelectString() As String
-    
-    Dim column As Long
-    
-    GetSqlSelectString = "select "
-    
-    For column = 0 To columns - 1
-    
-        GetSqlSelectString = GetSqlSelectString & columnNames(column)
-        
-        If column < (columns - 1) Then
-            GetSqlSelectString = GetSqlSelectString & " || '" & vbTab & "' || "
-        End If
-        
-    Next
-
-    GetSqlSelectString = GetSqlSelectString & " from " & from_
-        
-    If where_ <> "" Then
-        GetSqlSelectString = GetSqlSelectString & " where " & where_
-    End If
-
-    If orderby_ <> "" Then
-        GetSqlSelectString = GetSqlSelectString & " order by " & orderby_
-    Else
-        GetSqlSelectString = GetSqlSelectString & " order by ROWID"
-    End If
-    
-    GetSqlSelectString = GetSqlSelectString & ";"
-    
-End Function
-
-' -----------------------------------------------------------------------------
 ' 対象のプロセスと接続された際に発生します。
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     
     ' 操作の予約
     sender.SendLineToStdin "set linesize 32767"
-    sender.SendLineToStdin "set pagesize 0"
+    sender.SendLineToStdin "set head off"
+    sender.SendLineToStdin "set newpage 0"
     sender.SendLineToStdin "set feedback off"
     
-    sender.SendLineToStdin GetSqlSelectString()
+    Debug.Print "Info SimpleQueryFunction: " & sql
+    
+    sender.SendLineToStdin sql
     sender.SendLineToStdin "exit"
     
     ' 列名を結果に注入する
@@ -359,11 +346,6 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
     If Left(recvOutString, 5) = "SQL> " Then
         If dataReceiving = False Then
             dataReceiving = True
-            
-            ' 1 行目のデータの前に付くゴミの排除
-            Do While Left(recvOutString, 5) = "SQL> "
-                 recvOutString = Mid(recvOutString, 6)
-            Loop
         Else
             dataReceiving = False
         End If
@@ -374,9 +356,18 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
     
         Dim column As Long
         Dim data() As String
-        data = Split(recvOutString, vbTab)
+            
+        ' "set newpage 0" により付加される、改ページの削除
+        ' &hC(Form Feed(改ページ))を検出してそこまで取り除く
+        ' 改ページはデータの開始判定に利用しているため、意識的に付加している
+        If InStr(recvOutString, Chr(&HC)) > 0 Then
+            recvOutString = Mid(recvOutString, InStr(recvOutString, Chr(&HC)) + 1)
+        End If
+        
+        data = Split(recvOutString, columnDelimiter_)
         
         ' エラー文字列などではなく、データ部であること
+        ' (区切られた要素の個数が予想される列数と一致していること)
         If UBound(data) = (columns - 1) Then
         
 '           Debug.Print "> " & data(0) & " / " & data(1)
@@ -393,4 +384,6 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
     End If
     
 End Sub
+
+
 

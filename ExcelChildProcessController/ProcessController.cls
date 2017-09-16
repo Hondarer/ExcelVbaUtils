@@ -391,14 +391,14 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
         udtStartInfo.wShowWindow = SW_HIDE
         udtStartInfo.dwFlags = udtStartInfo.dwFlags Or STARTF_USESHOWWINDOW
     End If
-    
+
     ' プロセス起動
     If CreateProcess(vbNullString, commandLine, ByVal 0&, ByVal 0&, 1&, _
         NORMAL_PRIORITY_CLASS, ByVal 0&, ThisWorkbook.Path, udtStartInfo, udtProcInfo) = 0 Then
         Call MsgBox("プロセスの生成に失敗しました。エラーコード:" & Err.LastDllError & vbCrLf & commandLine, Buttons:=vbCritical, Title:="エラー")
         GoTo Error
     End If
-    
+
     Debug.Print "Info ProcessController: Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") started up."
    
     ' 接続完了コールバックを呼び出す

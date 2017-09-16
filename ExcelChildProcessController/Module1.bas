@@ -103,54 +103,54 @@ Public Sub Sample4()
 End Sub
 
 ' -----------------------------------------------------------------------------
-' データベースからの値取得簡易サンプルを実行します。
+' データベースからの値取得サンプルを実行します。
 ' -----------------------------------------------------------------------------
-Public Sub SimpleQueryFunctionSample()
+Public Sub QueryFunctionSample()
 
-    Dim func As New SimpleQueryFunction
-    
+    Dim func As New QueryFunction
+
     ' 設定値
     ' シートから取るなり定数で与えるなりお好きに
     func.Username = "hr"
     func.Password = "tiger"
     func.Tlsname = "XE"
-    
+
     ' 取得する列
-'    Call func.AddColumns("ROWID")
+    '    Call func.AddColumns("ROWID")
     Call func.AddColumns("REGION_ID")
     Call func.AddColumns("REGION_NAME")
-    
+
     ' from 句
     ' テーブル関数の場合は、引数まで与える
     func.From = "REGIONS"
-    
-'    ' where 句
-'    func.Where = "REGION_ID = 4"
-    
+
+    '    ' where 句
+    '    func.Where = "REGION_ID = 4"
+
     ' order by 句
     ' asc, desc が指定必要な場合は、ここで与える
     ' 明示的に指定しない場合は、フレームワークにより ROWID で order される。
     ' テーブル関数など ROWID が存在しない場合は必ず指定すること。
     func.Orderby = "REGION_ID"
-    
-'    ' タイムアウトの設定
-'    ' 明示的に指定しない場合は、フレームワークにより
-'    ' デフォルトのタイムアウト(60 秒)が指定される。単位は[ms]。
-'    func.QueryTimeoutMilliSeconds = 60& * 1000&
-    
+
+    '    ' タイムアウトの設定
+    '    ' 明示的に指定しない場合は、フレームワークにより
+    '    ' デフォルトのタイムアウト(60 秒)が指定される。単位は[ms]。
+    '    func.QueryTimeoutMilliSeconds = 60& * 1000&
+
     ' 問い合わせ実行
     Debug.Print "戻り値:" & func.Execute
-    
+
     ' セルに書き出すには以下のようにする
     ' ヘッダ行があるため、行の数はデータ + 1 となる、注意 !
-    
+
     Dim record As Long
     Dim column As Long
-    
+
     For record = 0 To func.GetRecordsCount
         For column = 0 To func.GetColumnsCount - 1
             ThisWorkbook.Worksheets("Sheet1").Cells(record + 1, column + 1).Value = func.GetResult(record, column)
         Next
     Next
-    
+
 End Sub
