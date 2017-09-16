@@ -49,7 +49,7 @@ Option Explicit
 
 ' Dependency: None
 
-#Const ENABLE_TEST_METHODS = 0
+#Const ENABLE_TEST_METHODS = 1
 
 ' -----------------------------------------------------------------------------
 ' スペシャルフォルダの識別子を表します。

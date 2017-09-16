@@ -49,18 +49,20 @@ Option Explicit
 
 ' Dependency: None
 
-#Const ENABLE_TEST_METHODS = 0
+#Const ENABLE_TEST_METHODS = 1
 
 ' -----------------------------------------------------------------------------
 ' 日付型の値を "YYYYMMDD" 方式の文字列に変換します。
+' <IN> source As Date 変換元の日付。
+' <OUT> String YYMMDD 方式の文字列。
 ' -----------------------------------------------------------------------------
-Public Function DateToYYYYMMDD(source As Date)
+Public Function DateToYYYYMMDD(sourceDate As Date) As String
 
-    If source = #12:00:00 AM# Then
+    If sourceDate = #12:00:00 AM# Then
         DateToYYYYMMDD = ""
         Exit Function
     End If
 
-    DateToYYYYMMDD = Format(source, "yyyymmdd")
+    DateToYYYYMMDD = Format(sourceDate, "yyyymmdd")
 
 End Function

@@ -49,7 +49,7 @@ Option Explicit
 
 ' Dependency: FileUtility
 
-#Const ENABLE_TEST_METHODS = 0
+#Const ENABLE_TEST_METHODS = 1
 
 ' reference:
 ' Excel ファイルパス、フォルダパスを選択しセルに格納する参照ボタン
@@ -58,7 +58,7 @@ Option Explicit
 ' -----------------------------------------------------------------------------
 ' フォルダの選択ダイアログを表示します。
 ' 初期フォルダが存在しない場合は、指定されたスペシャルフォルダを初期フォルダとして表示します。
-' <IN> defaultPath As String 初期フォルダ。指定しない場合は空文字を指定します。。
+' <IN> defaultPath As String 初期フォルダ。指定しない場合は空文字を指定します。
 ' <IN> fallbackSpecialFolder As String SPECIALFOLDERS_ で始まるスペシャルフォルダの識別子。defaultPath が空白または無効な場合に採用されます。
 ' <OUT> String 選択されたフォルダ。キャンセルされた場合は空文字を返します。
 ' -----------------------------------------------------------------------------
@@ -112,7 +112,7 @@ End Function
 ' -----------------------------------------------------------------------------
 Public Sub SelectFolderWithDialogTest()
 
-    Debug.Print "SelectFolder=" & SelectFolderWithDialog("", SPECIALFOLDERS_MYDOCUMENTS)
+    Debug.Print "SelectFolderWithDialog=" & SelectFolderWithDialog("", SPECIALFOLDERS_MYDOCUMENTS)
     
 End Sub
 

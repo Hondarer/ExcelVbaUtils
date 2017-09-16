@@ -49,7 +49,7 @@ Option Explicit
 
 ' Dependency: None
 
-#Const ENABLE_TEST_METHODS = 0
+#Const ENABLE_TEST_METHODS = 1
 
 ' -----------------------------------------------------------------------------
 ' 指定されたフォルダが存在するか返します。
@@ -66,3 +66,20 @@ Public Function FolderExists(folderName As String) As Boolean
     Set fso = Nothing
 
 End Function
+
+' -----------------------------------------------------------------------------
+' 指定されたファイルが存在するか返します。
+' <IN> folderName As String チェックするフォルダ名。
+' <OUT> Boolean ファイルが存在する場合は True、存在しない場合は False。
+' -----------------------------------------------------------------------------
+Public Function FileExists(fileName As String) As Boolean
+    
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    FileExists = fso.FileExists(fileName)
+    
+    Set fso = Nothing
+
+End Function
+
