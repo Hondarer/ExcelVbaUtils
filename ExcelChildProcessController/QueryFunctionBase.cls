@@ -61,7 +61,7 @@ Option Explicit
 
 Implements IProcessControlCallbacks
 
-Private Const DEFAULT_COLUMN_DELIMITER = ","
+Private Const DEFAULT_COLUMN_DELIMITER = vbTab
 
 Private Const QUERY_TIMEOUT = 60& * 1000& ' [ms]
 

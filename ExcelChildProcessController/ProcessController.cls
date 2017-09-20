@@ -84,22 +84,20 @@ Private Const POLLING_MILLISEC = 50& ' [ms]
 Private Const DEFAULT_IDLE_TIMEOUTMILLISEC = 500& ' [ms]
 Private Const DEFAULT_DEEPIDLE_TIMEOUTMILLISEC = 60& * 1000& ' [ms]
 
-' パイプ通信のバッファサイズを表します。
-Private Const BUFFER_LIMIT_LENGTH = 4096&
+' パイプ通信の送信バッファ単位を表します。
+Private Const BUFFER_LIMIT_LENGTH = 1024&
 
 Dim idleCount As Long
 Dim idleTimeoutCount As Long
 Dim deepIdleCount As Long
 Dim deepIdleTimeoutCount As Long
 
-Dim recvBuffer() As Byte ' 生バッファ
 Dim recvBuffer1() As Byte ' 1 次バッファ(シフト JIS のアライン未確定)
 Dim recvBuffer2() As Byte ' 2 次バッファ(ラインバッファ)
 
 Dim recvBuffer1Empty As Boolean
 Dim recvBuffer2Empty As Boolean
 
-Dim errBuffer() As Byte ' 生バッファ
 Dim errBuffer1() As Byte ' 1 次バッファ(シフト JIS のアライン未確定)
 Dim errBuffer2() As Byte ' 2 次バッファ(ラインバッファ)
 
@@ -197,10 +195,31 @@ Public Function SendTextToStdin(sendstring As String) As Boolean
     End If
     
     writeBuffer = StrConv(sendstring, vbFromUnicode)
-    If WriteFile(hInWrite, writeBuffer(0), UBound(writeBuffer) + 1, dwWritten, ov1) = 0 Then
-        SendTextToStdin = False
-        Exit Function
-    End If
+    
+    Dim remain As Long
+    remain = UBound(writeBuffer) + 1
+    
+    While remain > 0
+        
+        ' 出力バッファ満杯でプロセスがデッドロックすることを防ぐため、
+        ' 出力を読み取ってバッファを確保しておく
+        Call SuckRecvBuffer
+    
+        If remain < BUFFER_LIMIT_LENGTH Then
+            If WriteFile(hInWrite, writeBuffer(UBound(writeBuffer) - remain + 1), remain, dwWritten, ov1) = 0 Then
+                SendTextToStdin = False
+                Exit Function
+            End If
+        Else
+            If WriteFile(hInWrite, writeBuffer(UBound(writeBuffer) - remain + 1), BUFFER_LIMIT_LENGTH, dwWritten, ov1) = 0 Then
+                SendTextToStdin = False
+                Exit Function
+            End If
+        End If
+        
+        remain = remain - dwWritten
+        
+    Wend
     
     SendTextToStdin = True
 
@@ -301,8 +320,6 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
 
     Dim procExitCode As Long
     
-    Dim dwRead As Long
-    
     Dim strBuffer As String
     
     ReDim recvBuffer1(0)
@@ -317,7 +334,6 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     errBuffer1Empty = True
     errBuffer2Empty = True
     
-    Dim nextRecv1Index As Long
     Dim sjisFirstByte As Byte
     Dim processRecv1Index As Long
 
@@ -414,215 +430,140 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     
         Dim hasData As Boolean
         hasData = False
-        
-        Dim hasRemainData As Boolean
-        hasRemainData = False
     
         If GetExitCodeProcess(udtProcInfo.hProcess, procExitCode) = 0 Then
             ' 終了コード取得異常
             GoTo Error
         End If
         
-        If leaveStdout_ <> True Then
-            ' 標準出力からデータが読めることを確認する
-            If PeekNamedPipe(hOutRead, 0&, 0, 0&, dwRead, ByVal 0) <> 0 Then
-                If (dwRead > 0) Then
-                    ' データがある
-                    
-                    ' 未読み取りデータが多い場合は、クリップしながら処理する
-                    If dwRead > BUFFER_LIMIT_LENGTH Then
-                        dwRead = BUFFER_LIMIT_LENGTH
-                        hasRemainData = True
-                    End If
-                    
-                    ' 標準出力からデータを読み取る
-                    ReDim recvBuffer(dwRead - 1) As Byte
-                    If ReadFile(hOutRead, recvBuffer(0), UBound(recvBuffer) + 1, dwRead, ov2) <> 0 Then
-                    
-                        ' 受信バッファの処理
-                        ' 生バッファはまず、1 次バッファに積む
-                        nextRecv1Index = 0
-                        If recvBuffer1Empty = True Then
-                            ReDim recvBuffer1(dwRead - 1)
-                            recvBuffer1Empty = False
-                        Else
-                            nextRecv1Index = UBound(recvBuffer1) + 1
-                            ReDim Preserve recvBuffer1(UBound(recvBuffer1) + dwRead)
-                        End If
-                        
-                        Call CopyMemory(recvBuffer1(nextRecv1Index), recvBuffer(0), dwRead)
-                    
-                        ' 1 次バッファから順次、2 次バッファに詰めなおす
-                        ' CR および LF は、2 次バッファには詰めない
-                        ' LF が出現したら、行の区切りとし、コールバックを行う
-                        ' シフト JIS の上位バイトのみが余った場合は、1 次バッファに残しておく
-                        
-                        sjisFirstByte = 0
-                        
-                        If ((recvBuffer1(UBound(recvBuffer1)) >= &H80) And (recvBuffer1(UBound(recvBuffer1)) <= &H9F)) Or _
-                           ((recvBuffer1(UBound(recvBuffer1)) >= &HE0) And (recvBuffer1(UBound(recvBuffer1)) <= &HFF)) Then
-                           sjisFirstByte = recvBuffer1(UBound(recvBuffer1))
-                           ReDim Preserve recvBuffer1(UBound(recvBuffer1) - 1)
-                        End If
-                        
-                        For processRecv1Index = 0 To UBound(recvBuffer1)
-                            If recvBuffer1(processRecv1Index) = Asc(vbCr) Then
-                                ' NOP
-                            ElseIf recvBuffer1(processRecv1Index) = Asc(vbLf) Then
-                                ' コールバック実施
-                                If recvBuffer2Empty = True Then
-                                    If disableIoTrace_ <> True Then
-                                        Debug.Print "StdO "
-                                    End If
-                                    If Not func Is Nothing Then
-                                        Call func.OnRecieveLineFromStdout(Me, "")
-                                    End If
-                                Else
-                                    strBuffer = StrConv(recvBuffer2, vbUnicode)
-                                    If disableIoTrace_ <> True Then
-                                        Debug.Print "StdO " & strBuffer
-                                    End If
-                                    If Not func Is Nothing Then
-                                        Call func.OnRecieveLineFromStdout(Me, strBuffer)
-                                    End If
-                                End If
-                                ReDim recvBuffer2(0)
-                                recvBuffer2Empty = True
-                            Else
-                                ' 積み上げ
-                                If recvBuffer2Empty = True Then
-                                    recvBuffer2Empty = False
-                                Else
-                                    ReDim Preserve recvBuffer2(UBound(recvBuffer2) + 1)
-                                End If
-                                
-                                recvBuffer2(UBound(recvBuffer2)) = recvBuffer1(processRecv1Index)
-                            End If
-                        Next
-                        
-                        ReDim recvBuffer1(0)
-                        If sjisFirstByte <> 0 Then
-                            recvBuffer1(0) = sjisFirstByte
-                        Else
-                            recvBuffer1Empty = True
-                        End If
-                    
-                        idleCount = 0
-                        deepIdleCount = 0
-                        hasData = True
-                    
-                    Else
-                        ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
-    '                    ' API 呼出異常
-    '                    GoTo Error
-                    End If
-                End If
-            Else
-                ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
-    '            ' API 呼出異常
-    '            GoTo Error
+        Call SuckRecvBuffer
+        
+        ' 標準出力からデータを読み取る
+        If recvBuffer1Empty = False Then
+        
+            ' 1 次バッファから順次、2 次バッファに詰めなおす
+            ' CR および LF は、2 次バッファには詰めない
+            ' LF が出現したら、行の区切りとし、コールバックを行う
+            ' シフト JIS の上位バイトのみが余った場合は、1 次バッファに残しておく
+            
+            sjisFirstByte = 0
+            
+            If ((recvBuffer1(UBound(recvBuffer1)) >= &H80) And (recvBuffer1(UBound(recvBuffer1)) <= &H9F)) Or _
+               ((recvBuffer1(UBound(recvBuffer1)) >= &HE0) And (recvBuffer1(UBound(recvBuffer1)) <= &HFF)) Then
+               sjisFirstByte = recvBuffer1(UBound(recvBuffer1))
+               ReDim Preserve recvBuffer1(UBound(recvBuffer1) - 1)
             End If
+            
+            For processRecv1Index = 0 To UBound(recvBuffer1)
+                If recvBuffer1(processRecv1Index) = Asc(vbCr) Then
+                    ' NOP
+                ElseIf recvBuffer1(processRecv1Index) = Asc(vbLf) Then
+                    ' コールバック実施
+                    If recvBuffer2Empty = True Then
+                        If disableIoTrace_ <> True Then
+                            Debug.Print "StdO "
+                        End If
+                        If Not func Is Nothing Then
+                            Call func.OnRecieveLineFromStdout(Me, "")
+                        End If
+                    Else
+                        strBuffer = StrConv(recvBuffer2, vbUnicode)
+                        If disableIoTrace_ <> True Then
+                            Debug.Print "StdO " & strBuffer
+                        End If
+                        If Not func Is Nothing Then
+                            Call func.OnRecieveLineFromStdout(Me, strBuffer)
+                        End If
+                    End If
+                    ReDim recvBuffer2(0)
+                    recvBuffer2Empty = True
+                Else
+                    ' 積み上げ
+                    If recvBuffer2Empty = True Then
+                        recvBuffer2Empty = False
+                    Else
+                        ReDim Preserve recvBuffer2(UBound(recvBuffer2) + 1)
+                    End If
+                    
+                    recvBuffer2(UBound(recvBuffer2)) = recvBuffer1(processRecv1Index)
+                End If
+            Next
+            
+            ReDim recvBuffer1(0)
+            If sjisFirstByte <> 0 Then
+                recvBuffer1(0) = sjisFirstByte
+            Else
+                recvBuffer1Empty = True
+            End If
+        
+            idleCount = 0
+            deepIdleCount = 0
+            hasData = True
+            
         End If
-
-        If leaveStderr_ <> True Then
-            ' 標準エラー出力からデータが読めることを確認する
-            If PeekNamedPipe(hErrRead, 0&, 0, 0&, dwRead, ByVal 0) <> 0 Then
-                If (dwRead > 0) Then
-                    ' データがある
-                    
-                    ' 未読み取りデータが多い場合は、クリップしながら処理する
-                    If dwRead > BUFFER_LIMIT_LENGTH Then
-                        dwRead = BUFFER_LIMIT_LENGTH
-                        hasRemainData = True
-                    End If
-                    
-                    ' 標準エラー出力からデータを読み取る
-                    ReDim errBuffer(dwRead - 1) As Byte
-                    If ReadFile(hErrRead, errBuffer(0), UBound(errBuffer) + 1, dwRead, ov2) <> 0 Then
-                    
-                        ' 受信バッファの処理
-                        ' 生バッファはまず、1 次バッファに積む
-                        nextRecv1Index = 0
-                        If errBuffer1Empty = True Then
-                            ReDim errBuffer1(dwRead - 1)
-                            errBuffer1Empty = False
-                        Else
-                            nextRecv1Index = UBound(errBuffer1) + 1
-                            ReDim Preserve errBuffer1(UBound(errBuffer1) + dwRead)
-                        End If
-                        
-                        CopyMemory errBuffer1(nextRecv1Index), errBuffer(0), dwRead
-                    
-                        ' 1 次バッファから順次、2 次バッファに詰めなおす
-                        ' CR および LF は、2 次バッファには詰めない
-                        ' LF が出現したら、行の区切りとし、コールバックを行う
-                        ' シフト JIS の上位バイトのみが余った場合は、1 次バッファに残しておく
-                        
-                        sjisFirstByte = 0
-                        
-                        If ((errBuffer1(UBound(errBuffer1)) >= &H80) And (errBuffer1(UBound(errBuffer1)) <= &H9F)) Or _
-                           ((errBuffer1(UBound(errBuffer1)) >= &HE0) And (errBuffer1(UBound(errBuffer1)) <= &HFF)) Then
-                           sjisFirstByte = errBuffer1(UBound(errBuffer1))
-                           ReDim Preserve errBuffer1(UBound(errBuffer1) - 1)
-                        End If
-                        
-                        For processRecv1Index = 0 To UBound(errBuffer1)
-                            If errBuffer1(processRecv1Index) = Asc(vbCr) Then
-                                ' NOP
-                            ElseIf errBuffer1(processRecv1Index) = Asc(vbLf) Then
-                                ' コールバック実施
-                                If errBuffer2Empty = True Then
-                                    If disableIoTrace_ <> True Then
-                                        Debug.Print "StdE "
-                                    End If
-                                    If Not func Is Nothing Then
-                                        Call func.OnRecieveLineFromStderr(Me, "")
-                                    End If
-                                Else
-                                    strBuffer = StrConv(errBuffer2, vbUnicode)
-                                    If disableIoTrace_ <> True Then
-                                        Debug.Print "StdE " & strBuffer
-                                    End If
-                                    If Not func Is Nothing Then
-                                        Call func.OnRecieveLineFromStderr(Me, strBuffer)
-                                    End If
-                                End If
-                                ReDim errBuffer2(0)
-                                errBuffer2Empty = True
-                            Else
-                                ' 積み上げ
-                                If errBuffer2Empty = True Then
-                                    errBuffer2Empty = False
-                                Else
-                                    ReDim Preserve errBuffer2(UBound(errBuffer2) + 1)
-                                End If
-                                
-                                errBuffer2(UBound(errBuffer2)) = errBuffer1(processRecv1Index)
-                            End If
-                        Next
-                        
-                        ReDim errBuffer1(0)
-                        If sjisFirstByte <> 0 Then
-                            errBuffer1(0) = sjisFirstByte
-                        Else
-                            errBuffer1Empty = True
-                        End If
-                    
-                        idleCount = 0
-                        deepIdleCount = 0
-                        hasData = True
-                    
-                    Else
-                        ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
-    '                    ' API 呼出異常
-    '                    GoTo Error
-                    End If
-                End If
-            Else
-                ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
-    '            ' API 呼出異常
-    '            GoTo Error
+        
+        ' 標準エラー出力からデータを読み取る
+        If errBuffer1Empty = False Then
+        
+            ' 1 次バッファから順次、2 次バッファに詰めなおす
+            ' CR および LF は、2 次バッファには詰めない
+            ' LF が出現したら、行の区切りとし、コールバックを行う
+            ' シフト JIS の上位バイトのみが余った場合は、1 次バッファに残しておく
+            
+            sjisFirstByte = 0
+            
+            If ((errBuffer1(UBound(errBuffer1)) >= &H80) And (errBuffer1(UBound(errBuffer1)) <= &H9F)) Or _
+               ((errBuffer1(UBound(errBuffer1)) >= &HE0) And (errBuffer1(UBound(errBuffer1)) <= &HFF)) Then
+               sjisFirstByte = errBuffer1(UBound(errBuffer1))
+               ReDim Preserve errBuffer1(UBound(errBuffer1) - 1)
             End If
+            
+            For processRecv1Index = 0 To UBound(errBuffer1)
+                If errBuffer1(processRecv1Index) = Asc(vbCr) Then
+                    ' NOP
+                ElseIf errBuffer1(processRecv1Index) = Asc(vbLf) Then
+                    ' コールバック実施
+                    If errBuffer2Empty = True Then
+                        If disableIoTrace_ <> True Then
+                            Debug.Print "StdE "
+                        End If
+                        If Not func Is Nothing Then
+                            Call func.OnRecieveLineFromStderr(Me, "")
+                        End If
+                    Else
+                        strBuffer = StrConv(errBuffer2, vbUnicode)
+                        If disableIoTrace_ <> True Then
+                            Debug.Print "StdE " & strBuffer
+                        End If
+                        If Not func Is Nothing Then
+                            Call func.OnRecieveLineFromStderr(Me, strBuffer)
+                        End If
+                    End If
+                    ReDim errBuffer2(0)
+                    errBuffer2Empty = True
+                Else
+                    ' 積み上げ
+                    If errBuffer2Empty = True Then
+                        errBuffer2Empty = False
+                    Else
+                        ReDim Preserve errBuffer2(UBound(errBuffer2) + 1)
+                    End If
+                    
+                    errBuffer2(UBound(errBuffer2)) = errBuffer1(processRecv1Index)
+                End If
+            Next
+            
+            ReDim errBuffer1(0)
+            If sjisFirstByte <> 0 Then
+                errBuffer1(0) = sjisFirstByte
+            Else
+                errBuffer1Empty = True
+            End If
+        
+            idleCount = 0
+            deepIdleCount = 0
+            hasData = True
+            
         End If
 
         ' 読みだすべきデータがパイプから存在せず、かつ
@@ -692,11 +633,9 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                 End If
             End If
         
-        End If
-    
-        ' 待ち
-        If hasRemainData = False Then
+            ' 待ち
             Sleep POLLING_MILLISEC
+            
         End If
         
         ' イベント処理(マクロの多重起動は呼出し元で対処しておくこと)
@@ -752,6 +691,73 @@ Error:
     ExecuteProcess = EXIT_FAILURE
 
 End Function
+
+' -----------------------------------------------------------------------------
+' 出力およびエラー出力からデータを読み取り、1 次バッファに蓄積します。
+' -----------------------------------------------------------------------------
+Private Sub SuckRecvBuffer()
+
+    ' 起動したプロセスの出力バッファがいっぱいになると、プロセスは一時停止する。
+    ' そのため、起動したプロセスから常にデータを吸い上げないと、
+    ' こちらからデータを与えようとしたときにデッドロックに陥る。
+    ' 厳密には、マルチスレッドでないと問題の本質に対処できないが、
+    ' 送信をブロック化して、頻繁にデータを吸い上げることで対処する。
+    
+    Dim dwRemain As Long
+    Dim nextRecv1Index As Long
+    Dim dwRead As Long
+    
+    If leaveStdout_ <> True Then
+        ' 標準出力からデータが読めることを確認する
+        If PeekNamedPipe(hOutRead, 0&, 0, 0&, dwRemain, ByVal 0) <> 0 Then
+            If (dwRemain > 0) Then
+                ' データがある
+                
+                ' 標準出力からデータを読み取る
+                nextRecv1Index = 0
+                If recvBuffer1Empty = True Then
+                    ReDim recvBuffer1(dwRemain - 1)
+                    recvBuffer1Empty = False
+                Else
+                    nextRecv1Index = UBound(recvBuffer1) + 1
+                    ReDim Preserve recvBuffer1(UBound(recvBuffer1) + dwRemain)
+                End If
+                
+                If ReadFile(hOutRead, recvBuffer1(nextRecv1Index), dwRemain, dwRead, ov2) = 0 Then
+                    ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+                End If
+            End If
+        Else
+            ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+        End If
+    End If
+    
+    If leaveStderr_ <> True Then
+        ' 標準エラー出力からデータが読めることを確認する
+        If PeekNamedPipe(hErrRead, 0&, 0, 0&, dwRemain, ByVal 0) <> 0 Then
+            If (dwRemain > 0) Then
+                ' データがある
+                
+                ' 標準エラー出力からデータを読み取る
+                nextRecv1Index = 0
+                If errBuffer1Empty = True Then
+                    ReDim errBuffer1(dwRemain - 1)
+                    errBuffer1Empty = False
+                Else
+                    nextRecv1Index = UBound(errBuffer1) + 1
+                    ReDim Preserve errBuffer1(UBound(errBuffer1) + dwRemain)
+                End If
+                
+                If ReadFile(hErrRead, errBuffer1(nextRecv1Index), dwRemain, dwRead, ov2) = 0 Then
+                    ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+                End If
+            End If
+        Else
+            ' プロセスの終了コードによりループを抜けるため、エラーは無視する。
+        End If
+    End If
+
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' 新しいインスタンスを初期化します。
