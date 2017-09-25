@@ -106,19 +106,19 @@ Public Function GenaretePassword(passwordType As gpPasswordType, passwordLength 
     
     ' アルファベットのパスワードを生成
     For count = 1 To (passwordLength - numerics - symbols)
-        result = result & Mid(GPELEMENTS_ALPHABET, Int(Rnd * (Len(GPELEMENTS_ALPHABET) - 1)) + 1, 1)
+        result = result & Mid(GPELEMENTS_ALPHABET, Int(Rnd * Len(GPELEMENTS_ALPHABET)) + 1, 1)
     Next
     
     ' 数字部分のパスワードを生成して挿入
     For count = 1 To numerics
-        insertIndex = Int(Rnd * (Len(result) - 2)) + 2 ' 先頭/最終文字には数値が来ないようにする
-        result = Left(result, insertIndex) & Mid(GPELEMENTS_NUMERIC, Int(Rnd * (Len(GPELEMENTS_NUMERIC) - 1)) + 1, 1) & Mid(result, insertIndex + 1)
+        insertIndex = Int(Rnd * (Len(result) + 1))
+        result = Left(result, insertIndex) & Mid(GPELEMENTS_NUMERIC, Int(Rnd * Len(GPELEMENTS_NUMERIC)) + 1, 1) & Mid(result, insertIndex + 1)
     Next
     
     ' 記号部分のパスワードを生成して挿入
     For count = 1 To symbols
-        insertIndex = Int(Rnd * (Len(result) - 2)) + 2 ' 先頭/最終文字には記号が来ないようにする
-        result = Left(result, insertIndex) & Mid(GPELEMENTS_SYMBOLS, Int(Rnd * (Len(GPELEMENTS_SYMBOLS) - 1)) + 1, 1) & Mid(result, insertIndex + 1)
+        insertIndex = Int(Rnd * (Len(result) + 1))
+        result = Left(result, insertIndex) & Mid(GPELEMENTS_SYMBOLS, Int(Rnd * Len(GPELEMENTS_SYMBOLS)) + 1, 1) & Mid(result, insertIndex + 1)
     Next
     
     GenaretePassword = result
