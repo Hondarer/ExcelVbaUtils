@@ -52,14 +52,49 @@ Option Explicit
 #Const ENABLE_TEST_METHODS = 1
 
 Public Const WORKBOOK_EXT = ".xlsx"
+Public Const WORKBOOKWITHMACRO_EXT = ".xlsm"
+
+' -----------------------------------------------------------------------------
+' 別のプロセスでブックを開きます。
+' <IN> filePath As String 開くブックのパス。
+' <OUT> Boolean 処理に成功した場合、True。失敗した場合、False。
+' -----------------------------------------------------------------------------
+Public Function OpenWorkbookAsNewProcess(bookPath As String) As Boolean
+
+    Dim excl As Object
+    Dim lastErr As Long
+    
+    If FileExists(bookPath) = False Then
+        OpenWorkbookAsNewProcess = False
+        Exit Function
+    End If
+    
+    Set excl = CreateObject("Excel.Application")
+    On Error Resume Next
+    Err = 0
+    excl.Workbooks.Open fileName:=bookPath, ReadOnly:=True
+    lastErr = Err
+    On Error GoTo 0
+    
+    If lastErr = 0 Then
+        excl.Visible = True
+        OpenWorkbookAsNewProcess = True
+    Else
+        excl.Quit
+        OpenWorkbookAsNewProcess = False
+    End If
+    
+    Set excl = Nothing
+    
+End Function
 
 ' -----------------------------------------------------------------------------
 ' ブックに名前をつけて保存します。
 ' 保存できない場合には問い合わせを行い、通番を付与した適切な名称で保存します。
 ' <IN> book As Workbook 保存するブック。
 ' <IN> filePath As String 保存するブックのパス。空文字の場合は、このマクロが動作しているブックのパス。
-' <IN> fileName As String 拡張子を除く、保存するブックの基本ファイル名。
-' <OUT> String 保存に成功した場合、そのブックの名称。失敗した場合、空文字。
+' <IN> fileName As String 拡張子を含む、保存するブックのファイル名。
+' <OUT> String 保存に成功した場合、そのブックのフルパス。失敗した場合、空文字。
 ' -----------------------------------------------------------------------------
 Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As String) As String
 
@@ -67,59 +102,68 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
     Dim seq As Long '重複回避用の通番
     Dim seqedName As String
     Dim lastErr As Long
+    
+    Dim extension As String
+    
+    If InStr(fileName, ".") = 0 Then
+        Exit Function
+    End If
+
+    extension = Mid(fileName, InStrRev(fileName, "."))
+    fileName = Left(fileName, Len(fileName) - Len(extension))
 
     ' パスを省略した場合の処理
     If filePath = "" Then
-        filePath = ThisWorkbook.path
+        filePath = ThisWorkbook.Path
     End If
 
-    If FolderExists(filePath & "\" & fileName & WORKBOOK_EXT) = True Then
+    If FolderExists(filePath & "\" & fileName & extension) = True Then
         ' 同名のフォルダが存在する
-        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & WORKBOOK_EXT & "' という名前のフォルダが既にあります。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
+        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & extension & "' という名前のフォルダが既にあります。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
         If msgboxResult = vbOK Then
             ' ユニークな名称を検索
             Do
                 seq = seq + 1
                 seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & WORKBOOK_EXT)) And (Not FileExists(filePath & "\" & seqedName & WORKBOOK_EXT)) Then
+                If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
                     ' ユニークな名称が見つかった
                     Exit Do
                 End If
             Loop
-            Call book.SaveAs(filePath & "\" & seqedName & WORKBOOK_EXT)
+            Call book.SaveAs(filePath & "\" & seqedName & extension)
         Else
             ' キャンセルされた
             Call book.Close(False)
             Exit Function
         End If
-    ElseIf FileExists(filePath & "\" & fileName & WORKBOOK_EXT) = True Then
+    ElseIf FileExists(filePath & "\" & fileName & extension) = True Then
         ' ファイルが存在する
-        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & WORKBOOK_EXT & "' という名前のファイルが既にあります。置き換えますか?", vbYesNoCancel Or vbInformation)
+        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & extension & "' という名前のファイルが既にあります。置き換えますか?", vbYesNoCancel Or vbInformation)
         If msgboxResult = vbYes Then
             ' 置き換え
             Application.DisplayAlerts = False
             
             On Error Resume Next
             Err = 0
-            Call book.SaveAs(filePath & "\" & fileName & WORKBOOK_EXT)
+            Call book.SaveAs(filePath & "\" & fileName & extension)
             lastErr = Err
             On Error GoTo 0
             Application.DisplayAlerts = True
             
             ' 置き換えようとしたが誰かが開いている等
             If lastErr <> 0 Then
-                msgboxResult = MsgBox("'" & filePath & "\" & fileName & WORKBOOK_EXT & "' の保存に失敗しました。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
+                msgboxResult = MsgBox("'" & filePath & "\" & fileName & extension & "' の保存に失敗しました。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
                 If msgboxResult = vbOK Then
                     ' ユニークな名称を検索
                     Do
                         seq = seq + 1
                         seqedName = fileName & "(" & seq & ")"
-                        If (Not FolderExists(filePath & "\" & seqedName & WORKBOOK_EXT)) And (Not FileExists(filePath & "\" & seqedName & WORKBOOK_EXT)) Then
+                        If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
                             ' ユニークな名称が見つかった
                             Exit Do
                         End If
                     Loop
-                    Call book.SaveAs(filePath & "\" & seqedName & WORKBOOK_EXT)
+                    Call book.SaveAs(filePath & "\" & seqedName & extension)
                 Else
                     ' キャンセルされた
                     Call book.Close(False)
@@ -132,12 +176,12 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
             Do
                 seq = seq + 1
                 seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & WORKBOOK_EXT)) And (Not FileExists(filePath & "\" & seqedName & WORKBOOK_EXT)) Then
+                If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
                     ' ユニークな名称が見つかった
                     Exit Do
                 End If
             Loop
-            Call book.SaveAs(filePath & "\" & seqedName & WORKBOOK_EXT)
+            Call book.SaveAs(filePath & "\" & seqedName & extension)
         Else
             ' キャンセルされた
             Call book.Close(False)
@@ -145,18 +189,12 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
         End If
     Else
         ' 正常ケース
-        Call book.SaveAs(filePath & "\" & fileName & WORKBOOK_EXT)
+        Call book.SaveAs(filePath & "\" & fileName & extension)
     End If
 
-    msgboxResult = MsgBox(book.FullName & " に出力しました。このブックを開いたままにしますか?", vbYesNo Or vbInformation)
+    SaveAsWorkBook = book.FullName
     
-    SaveAsWorkBook = book.name
-    
-    If msgboxResult = vbNo Then
-        ' No のときは閉じる。
-        ' 結果的に、Yes のときは開かれている。
-        Call book.Close(False)
-    End If
+    Call book.Close
 
 End Function
 
