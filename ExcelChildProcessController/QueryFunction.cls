@@ -70,6 +70,19 @@ Dim where_ As String
 Dim orderby_ As String
 
 ' -----------------------------------------------------------------------------
+' このオブジェクトのスタータス変化を受け取る IStateHandler インターフェースを取得します。
+' -----------------------------------------------------------------------------
+Property Get StateHandler() As IStateHandler
+    Set StateHandler = base.StateHandler
+End Property
+' -----------------------------------------------------------------------------
+' このオブジェクトのスタータス変化を受け取る IStateHandler インターフェースを設定します。
+' -----------------------------------------------------------------------------
+Property Let StateHandler(stateHandler__ As IStateHandler)
+    base.StateHandler = stateHandler__
+End Property
+
+' -----------------------------------------------------------------------------
 ' ユーザー名を取得します。
 ' -----------------------------------------------------------------------------
 Property Get Username() As String
@@ -167,11 +180,12 @@ End Property
 Private Sub Class_Initialize()
     Set base = New QueryFunctionBase
 End Sub
+
 ' -----------------------------------------------------------------------------
 ' 列を追加します。
 ' -----------------------------------------------------------------------------
-Public Sub AddColumns(columnName As String)
-    Call base.AddColumns(columnName)
+Public Sub AddColumns(columnName As String, isDummyColumn As Boolean)
+    Call base.AddColumns(columnName, isDummyColumn)
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -198,8 +212,15 @@ End Function
 ' -----------------------------------------------------------------------------
 ' 値を返します。
 ' -----------------------------------------------------------------------------
-Public Function GetResult(record As Long, column As Long) As Variant
-    GetResult = base.GetResult(record, column)
+Public Function GetResult() As Variant
+    GetResult = base.GetResult
+End Function
+
+' -----------------------------------------------------------------------------
+' 値を1つ返します。
+' -----------------------------------------------------------------------------
+Public Function GetResultOne(record As Long, column As Long) As Variant
+    GetResultOne = base.GetResult(record, column)
 End Function
 
 ' -----------------------------------------------------------------------------

@@ -73,9 +73,13 @@ Public errorDescription As String
 ' データ受信中かどうかを保持します。
 Dim dataReceiving As Boolean
 
+Dim stateHandler_ As IStateHandler
+
 Dim records As Long
 Dim columns As Long
+Dim realColumns As Long
 Dim columnNames() As String
+Dim dummyColumn() As Boolean
 
 ' 結果を保持します。
 Dim result() As Variant
@@ -93,6 +97,21 @@ Dim queryTimeout_ As Long
 ' -----------------------------------------------------------------------------
 Property Get IProcessControlCallbacks_() As IProcessControlCallbacks
     Set IProcessControlCallbacks_ = Me
+End Property
+
+' -----------------------------------------------------------------------------
+' このオブジェクトのスタータス変化を受け取る IStateHandler インターフェースを取得します。
+' -----------------------------------------------------------------------------
+Property Get StateHandler() As IStateHandler
+    If Not stateHandler_ Is Nothing Then
+        Set StateHandler = stateHandler_
+    End If
+End Property
+' -----------------------------------------------------------------------------
+' このオブジェクトのスタータス変化を受け取る IStateHandler インターフェースを設定します。
+' -----------------------------------------------------------------------------
+Property Let StateHandler(stateHandler__ As IStateHandler)
+    Set stateHandler_ = stateHandler__
 End Property
 
 ' -----------------------------------------------------------------------------
@@ -193,16 +212,23 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' 列を追加します。
 ' -----------------------------------------------------------------------------
-Public Sub AddColumns(columnName As String)
+Public Sub AddColumns(columnName As String, isDummyColumn As Boolean)
 
     If columns = 0 Then
         columnNames(0) = columnName
+        dummyColumn(0) = isDummyColumn
     Else
         ReDim Preserve columnNames(columns)
         columnNames(columns) = columnName
+        ReDim Preserve dummyColumn(columns)
+        dummyColumn(columns) = isDummyColumn
     End If
     
     columns = columns + 1
+    
+    If isDummyColumn = False Then
+        realColumns = realColumns + 1
+    End If
 
 End Sub
 
@@ -212,7 +238,9 @@ End Sub
 Public Sub ClearColumns()
 
     columns = 0
+    realColumns = 0
     ReDim columnNames(0)
+    ReDim dummyColumn(0)
 
 End Sub
 
@@ -247,8 +275,16 @@ End Function
 ' -----------------------------------------------------------------------------
 ' 値を返します。
 ' -----------------------------------------------------------------------------
-Public Function GetResult(record As Long, column As Long) As Variant
-    GetResult = result(column, record)
+Public Function GetResult() As Variant
+    ' シートに張り付けることを考慮した行列に変換してから返す
+    GetResult = WorksheetFunction.Transpose(result)
+End Function
+
+' -----------------------------------------------------------------------------
+' 値を1つ返します。
+' -----------------------------------------------------------------------------
+Public Function GetResultOne(record As Long, column As Long) As Variant
+    GetResultOne = result(column, record)
 End Function
 
 ' -----------------------------------------------------------------------------
@@ -270,6 +306,10 @@ End Function
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     
+    If Not StateHandler Is Nothing Then
+        Call StateHandler.OnStatusChanged("SQL を送信しています...")
+    End If
+    
     ' 操作の予約
     sender.SendLineToStdin "set linesize 32767"
     sender.SendLineToStdin "set head off"
@@ -281,6 +321,10 @@ Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
     sender.SendLineToStdin sql
     sender.SendLineToStdin "exit"
     
+    If Not StateHandler Is Nothing Then
+        Call StateHandler.OnStatusChanged("問い合わせ結果を待機しています...")
+    End If
+
     ' 列名を結果に注入する
     Dim column As Long
     ReDim Preserve result(columns - 1, 0)
@@ -368,15 +412,26 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
         
         ' エラー文字列などではなく、データ部であること
         ' (区切られた要素の個数が予想される列数と一致していること)
-        If UBound(data) = (columns - 1) Then
+        If UBound(data) = (realColumns - 1) Then
         
 '           Debug.Print "> " & data(0) & " / " & data(1)
 
             records = records + 1
             ReDim Preserve result(columns - 1, records)
+    
+            If Not StateHandler Is Nothing Then
+                If (records Mod 1000) = 1 Then
+                    Call StateHandler.OnStatusChanged("問い合わせ結果を受信しています...(" & records & ")")
+                End If
+            End If
+            
+            Dim datacolumn As Long
             
             For column = 0 To columns - 1
-                result(column, records) = data(column)
+                If dummyColumn(column) = False Then
+                    result(column, records) = data(datacolumn)
+                    datacolumn = datacolumn + 1
+                End If
             Next
         
         End If
