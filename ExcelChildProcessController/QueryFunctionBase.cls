@@ -70,9 +70,6 @@ Public controller As New ProcessController
 Public isError As Boolean
 Public errorDescription As String
 
-' データ受信中かどうかを保持します。
-Dim dataReceiving As Boolean
-
 Dim stateHandler_ As IStateHandler
 
 Dim records As Long
@@ -91,6 +88,14 @@ Dim sql_ As String
 Dim columnDelimiter_ As String
 
 Dim queryTimeout_ As Long
+
+Public Enum ExecutionPhase
+    Ready = 0
+    SqlSended = 1
+    Recieveing = 2
+End Enum
+
+Private phase As ExecutionPhase
 
 ' -----------------------------------------------------------------------------
 ' このオブジェクトの IProcessControlCallbacks インターフェースを取得します。
@@ -305,25 +310,6 @@ End Function
 ' 対象のプロセスと接続された際に発生します。
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnConnected(sender As ProcessController)
-    
-    If Not StateHandler Is Nothing Then
-        Call StateHandler.OnStatusChanged("SQL を送信しています...")
-    End If
-    
-    ' 操作の予約
-    sender.SendLineToStdin "set linesize 32767"
-    sender.SendLineToStdin "set head off"
-    sender.SendLineToStdin "set newpage 0"
-    sender.SendLineToStdin "set feedback off"
-    
-    Debug.Print "Info SimpleQueryFunction: " & sql
-    
-    sender.SendLineToStdin sql
-    sender.SendLineToStdin "exit"
-    
-    If Not StateHandler Is Nothing Then
-        Call StateHandler.OnStatusChanged("問い合わせ結果を待機しています...")
-    End If
 
     ' 列名を結果に注入する
     Dim column As Long
@@ -355,6 +341,11 @@ End Sub
 ' 対象のプロセスが短時間通信をしなかった際に発生します。
 ' -----------------------------------------------------------------------------
 Private Sub IProcessControlCallbacks_OnIdle(sender As ProcessController, lineString As String)
+
+    If Left(lineString, 5) = "SQL> " Then
+        Call IProcessControlCallbacks_OnRecieveLineFromStdout(sender, lineString)
+    End If
+
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -386,17 +377,41 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
         Exit Sub
     End If
 
-    ' プロンプトからプロンプトまでを、データ部として扱う判定処理
+    ' プロンプトを受けることによりフェーズを進める
     If Left(recvOutString, 5) = "SQL> " Then
-        If dataReceiving = False Then
-            dataReceiving = True
-        Else
-            dataReceiving = False
-        End If
+        Select Case phase
+        
+            Case Ready
+            
+                If Not StateHandler Is Nothing Then
+                    Call StateHandler.OnStatusChanged("SQL を送信しています...")
+                End If
+                
+                ' 操作の予約
+                sender.SendLineToStdin "set linesize 32767"
+                sender.SendLineToStdin "set head off"
+                sender.SendLineToStdin "set newpage 0"
+                sender.SendLineToStdin "set feedback off"
+                
+                Debug.Print "Info SimpleQueryFunction: " & sql
+                
+                sender.SendLineToStdin sql
+                sender.SendLineToStdin "exit"
+                
+                If Not StateHandler Is Nothing Then
+                    Call StateHandler.OnStatusChanged("問い合わせ結果を待機しています...")
+                End If
+                
+                phase = SqlSended
+                
+            Case SqlSended
+                phase = Recieveing
+                
+        End Select
     End If
     
     ' データ受信中の処理
-    If dataReceiving = True Then
+    If phase = Recieveing Then
     
         Dim column As Long
         Dim data() As String
