@@ -673,6 +673,8 @@ Error:
 
     Debug.Print "Warn ProcessController: Child process(" & commandLine & ") could not be executed with error."
     
+    Application.Cursor = xlDefault
+    
     ' ƒnƒ“ƒhƒ‹‚ð•Â‚¶‚é
     CloseHandle udtProcInfo.hThread
     CloseHandle udtProcInfo.hProcess
