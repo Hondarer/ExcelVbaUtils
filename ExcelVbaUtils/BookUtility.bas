@@ -51,6 +51,8 @@ Option Explicit
 
 #Const ENABLE_TEST_METHODS = 1
 
+Private Const LONG_MAXVALUE = 2147483647
+
 Public Const WORKBOOK_EXT = ".xlsx"
 Public Const WORKBOOKWITHMACRO_EXT = ".xlsm"
 
@@ -101,8 +103,6 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
     Dim msgboxResult As VbMsgBoxResult
     Dim seq As Long '重複回避用の通番
     Dim seqedName As String
-    Dim lastErr As Long
-    
     Dim extension As String
     
     If InStr(fileName, ".") = 0 Then
@@ -125,12 +125,27 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
             Do
                 seq = seq + 1
                 seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
+                If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
+                   (Not FileExists(filePath & "\" & seqedName & extension)) And _
+                   (Not WorkbookExists(seqedName & extension)) Then
                     ' ユニークな名称が見つかった
                     Exit Do
                 End If
+                
+                If seq = LONG_MAXVALUE Then
+                    Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
+                                "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
+                    Call book.Close(False)
+                    Exit Function
+                End If
             Loop
-            Call book.SaveAs(filePath & "\" & seqedName & extension)
+            
+            ' 保存処理
+            If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+                ' 保存に失敗
+                Call book.Close(False)
+                Exit Function
+            End If
         Else
             ' キャンセルされた
             Call book.Close(False)
@@ -140,30 +155,36 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
         ' ファイルが存在する
         msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & extension & "' という名前のファイルが既にあります。置き換えますか?", vbYesNoCancel Or vbInformation)
         If msgboxResult = vbYes Then
-            ' 置き換え
-            Application.DisplayAlerts = False
-            
-            On Error Resume Next
-            Err = 0
-            Call book.SaveAs(filePath & "\" & fileName & extension)
-            lastErr = Err
-            On Error GoTo 0
-            Application.DisplayAlerts = True
             
             ' 置き換えようとしたが誰かが開いている等
-            If lastErr <> 0 Then
+            If SaveAsWorkBookCore(book, filePath, fileName & extension, False) <> True Then
                 msgboxResult = MsgBox("'" & filePath & "\" & fileName & extension & "' の保存に失敗しました。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
                 If msgboxResult = vbOK Then
                     ' ユニークな名称を検索
                     Do
                         seq = seq + 1
                         seqedName = fileName & "(" & seq & ")"
-                        If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
+                        If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
+                           (Not FileExists(filePath & "\" & seqedName & extension)) And _
+                           (Not WorkbookExists(seqedName & extension)) Then
                             ' ユニークな名称が見つかった
                             Exit Do
                         End If
+                
+                        If seq = LONG_MAXVALUE Then
+                            Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
+                                        "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
+                            Call book.Close(False)
+                            Exit Function
+                        End If
                     Loop
-                    Call book.SaveAs(filePath & "\" & seqedName & extension)
+                
+                    ' 保存処理
+                    If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+                        ' 保存に失敗
+                        Call book.Close(False)
+                        Exit Function
+                    End If
                 Else
                     ' キャンセルされた
                     Call book.Close(False)
@@ -176,25 +197,106 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
             Do
                 seq = seq + 1
                 seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & extension)) And (Not FileExists(filePath & "\" & seqedName & extension)) Then
+                If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
+                   (Not FileExists(filePath & "\" & seqedName & extension)) And _
+                   (Not WorkbookExists(seqedName & extension)) Then
                     ' ユニークな名称が見つかった
                     Exit Do
                 End If
+                
+                If seq = LONG_MAXVALUE Then
+                    Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
+                                "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
+                    Call book.Close(False)
+                    Exit Function
+                End If
             Loop
-            Call book.SaveAs(filePath & "\" & seqedName & extension)
+        
+            ' 保存処理
+            If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+                ' 保存に失敗
+                Call book.Close(False)
+                Exit Function
+            End If
         Else
             ' キャンセルされた
             Call book.Close(False)
             Exit Function
         End If
     Else
-        ' 正常ケース
-        Call book.SaveAs(filePath & "\" & fileName & extension)
+        ' ファイル名重複チェック OK の場合
+        ' 保存処理
+        If SaveAsWorkBookCore(book, filePath, fileName & extension, True) <> True Then
+            ' 保存に失敗
+            Call book.Close(False)
+            Exit Function
+        End If
     End If
 
     SaveAsWorkBook = book.FullName
     
     Call book.Close
+
+End Function
+
+' -----------------------------------------------------------------------------
+' このプロセスで指定されたブック名がすでに開かれているかどうかを返します。
+' <IN> workbookName As String チェックするブック名。
+' <OUT> Boolean 既にブックが開かれている場合、True。開かれていない場合、False。
+' -----------------------------------------------------------------------------
+Public Function WorkbookExists(workbookName As String) As Boolean
+    
+    Dim book As Workbook
+    
+    For Each book In Application.Workbooks
+        If book.Name = workbookName Then
+            WorkbookExists = True
+            Exit Function
+        End If
+    Next
+    
+    WorkbookExists = False
+    
+End Function
+
+' -----------------------------------------------------------------------------
+' ブックに名前をつけて保存します。
+' <IN> book As Workbook 保存するブック。
+' <IN> filePath As String 保存するブックのパス。空文字の場合は、このマクロが動作しているブックのパス。
+' <IN> fileName As String 拡張子を含む、保存するブックのファイル名。
+' <IN> showDialog As Boolean 保存に失敗した際にダイアログを表示するかどうか。
+' <OUT> Boolean 保存に成功した場合、True。失敗した場合、False。
+' -----------------------------------------------------------------------------
+Private Function SaveAsWorkBookCore(book As Workbook, filePath As String, fileName As String, showDialog As Boolean) As Boolean
+
+    Dim lastErr As Long
+    Dim lastErrDescription As String
+
+    ' ブックを保存する
+    On Error Resume Next
+    Err = 0
+    Call book.SaveAs(filePath & "\" & fileName)
+    lastErr = Err
+    lastErrDescription = Err.description
+    On Error GoTo 0
+    
+    ' 保存に失敗したか
+    If lastErr <> 0 Then
+    
+        ' 失敗したのでダイアログを表示
+        If showDialog = True Then
+            Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & vbCrLf & _
+                        lastErrDescription, vbOKOnly Or vbExclamation)
+        End If
+        
+        SaveAsWorkBookCore = False
+        
+    Else
+    
+        ' 保存に成功
+        SaveAsWorkBookCore = True
+        
+    End If
 
 End Function
 
@@ -208,7 +310,7 @@ Public Sub SaveAsWorkBookTest()
     Dim newBook As Workbook
     Set newBook = Workbooks.Add(xlWBATWorksheet)
     
-    Call SaveAsWorkBook(newBook, "", "Test")
+    Call SaveAsWorkBook(newBook, "", "Test.xlsx")
     
     Set newBook = Nothing
     
