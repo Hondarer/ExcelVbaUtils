@@ -101,47 +101,32 @@ End Function
 Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As String) As String
 
     Dim msgboxResult As VbMsgBoxResult
-    Dim seq As Long '重複回避用の通番
     Dim seqedName As String
-    Dim extension As String
     
     If InStr(fileName, ".") = 0 Then
         Exit Function
     End If
-
-    extension = Mid(fileName, InStrRev(fileName, "."))
-    fileName = Left(fileName, Len(fileName) - Len(extension))
 
     ' パスを省略した場合の処理
     If filePath = "" Then
         filePath = ThisWorkbook.Path
     End If
 
-    If FolderExists(filePath & "\" & fileName & extension) = True Then
+    If FolderExists(filePath & "\" & fileName) = True Then
         ' 同名のフォルダが存在する
-        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & extension & "' という名前のフォルダが既にあります。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
+        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & "' という名前のフォルダが既にあります。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
         If msgboxResult = vbOK Then
+        
             ' ユニークな名称を検索
-            Do
-                seq = seq + 1
-                seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
-                   (Not FileExists(filePath & "\" & seqedName & extension)) And _
-                   (Not WorkbookExists(seqedName & extension)) Then
-                    ' ユニークな名称が見つかった
-                    Exit Do
-                End If
-                
-                If seq = LONG_MAXVALUE Then
-                    Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
-                                "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
-                    Call book.Close(False)
-                    Exit Function
-                End If
-            Loop
+            seqedName = FindUniqueFileName(filePath, fileName)
+            If seqedName = "" Then
+                ' 検索に失敗
+                Call book.Close(False)
+                Exit Function
+            End If
             
             ' 保存処理
-            If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+            If SaveAsWorkBookCore(book, filePath, seqedName, True) <> True Then
                 ' 保存に失敗
                 Call book.Close(False)
                 Exit Function
@@ -151,36 +136,26 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
             Call book.Close(False)
             Exit Function
         End If
-    ElseIf FileExists(filePath & "\" & fileName & extension) = True Then
+    ElseIf FileExists(filePath & "\" & fileName) = True Then
         ' ファイルが存在する
-        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & extension & "' という名前のファイルが既にあります。置き換えますか?", vbYesNoCancel Or vbInformation)
+        msgboxResult = MsgBox("この場所に '" & filePath & "\" & fileName & "' という名前のファイルが既にあります。置き換えますか?", vbYesNoCancel Or vbInformation)
         If msgboxResult = vbYes Then
             
             ' 置き換えようとしたが誰かが開いている等
-            If SaveAsWorkBookCore(book, filePath, fileName & extension, False) <> True Then
-                msgboxResult = MsgBox("'" & filePath & "\" & fileName & extension & "' の保存に失敗しました。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
+            If SaveAsWorkBookCore(book, filePath, fileName, False) <> True Then
+                msgboxResult = MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。名前を変更して保存しますか?", vbOKCancel Or vbInformation)
                 If msgboxResult = vbOK Then
+                    
                     ' ユニークな名称を検索
-                    Do
-                        seq = seq + 1
-                        seqedName = fileName & "(" & seq & ")"
-                        If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
-                           (Not FileExists(filePath & "\" & seqedName & extension)) And _
-                           (Not WorkbookExists(seqedName & extension)) Then
-                            ' ユニークな名称が見つかった
-                            Exit Do
-                        End If
-                
-                        If seq = LONG_MAXVALUE Then
-                            Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
-                                        "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
-                            Call book.Close(False)
-                            Exit Function
-                        End If
-                    Loop
+                    seqedName = FindUniqueFileName(filePath, fileName)
+                    If seqedName = "" Then
+                        ' 検索に失敗
+                        Call book.Close(False)
+                        Exit Function
+                    End If
                 
                     ' 保存処理
-                    If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+                    If SaveAsWorkBookCore(book, filePath, seqedName, True) <> True Then
                         ' 保存に失敗
                         Call book.Close(False)
                         Exit Function
@@ -193,27 +168,17 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
             End If
             
         ElseIf msgboxResult = vbNo Then
+            
             ' ユニークな名称を検索
-            Do
-                seq = seq + 1
-                seqedName = fileName & "(" & seq & ")"
-                If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
-                   (Not FileExists(filePath & "\" & seqedName & extension)) And _
-                   (Not WorkbookExists(seqedName & extension)) Then
-                    ' ユニークな名称が見つかった
-                    Exit Do
-                End If
-                
-                If seq = LONG_MAXVALUE Then
-                    Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
-                                "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
-                    Call book.Close(False)
-                    Exit Function
-                End If
-            Loop
+            seqedName = FindUniqueFileName(filePath, fileName)
+            If seqedName = "" Then
+                ' 検索に失敗
+                Call book.Close(False)
+                Exit Function
+            End If
         
             ' 保存処理
-            If SaveAsWorkBookCore(book, filePath, seqedName & extension, True) <> True Then
+            If SaveAsWorkBookCore(book, filePath, seqedName, True) <> True Then
                 ' 保存に失敗
                 Call book.Close(False)
                 Exit Function
@@ -226,7 +191,7 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
     Else
         ' ファイル名重複チェック OK の場合
         ' 保存処理
-        If SaveAsWorkBookCore(book, filePath, fileName & extension, True) <> True Then
+        If SaveAsWorkBookCore(book, filePath, fileName, True) <> True Then
             ' 保存に失敗
             Call book.Close(False)
             Exit Function
@@ -236,6 +201,48 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
     SaveAsWorkBook = book.FullName
     
     Call book.Close
+
+End Function
+
+' -----------------------------------------------------------------------------
+' 付与可能なファイル名を検索し返却します。
+' <IN> filePath As String 保存するブックのパス。空文字の場合は、このマクロが動作しているブックのパス。
+' <IN> fileName As String 拡張子を含む、保存するブックのファイル名。
+' <OUT> String ファイル名の検索に成功した場合、拡張子を含む、保存するブックのファイル名。失敗した場合、空文字。
+' -----------------------------------------------------------------------------
+Private Function FindUniqueFileName(filePath As String, fileName As String) As String
+    
+    Dim seq As Long '重複回避用の通番
+    Dim seqedName As String
+    Dim extension As String
+    
+    extension = Mid(fileName, InStrRev(fileName, "."))
+    fileName = Left(fileName, Len(fileName) - Len(extension))
+
+    Do
+        If seq = 0 Then
+            seqedName = fileName
+        Else
+            seqedName = fileName & "(" & seq & ")"
+        End If
+        
+        If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
+           (Not FileExists(filePath & "\" & seqedName & extension)) And _
+           (Not WorkbookExists(seqedName & extension)) Then
+            ' ユニークな名称が見つかった
+            Exit Do
+        End If
+        
+        If seq = LONG_MAXVALUE Then
+            Call MsgBox("'" & filePath & "\" & fileName & "' の保存に失敗しました。" & vbCrLf & _
+                        "通番が最大値に達しました。", vbOKOnly Or vbExclamation)
+            Exit Function
+        End If
+        
+        seq = seq + 1
+    Loop
+    
+    FindUniqueFileName = seqedName & extension
 
 End Function
 
@@ -273,12 +280,14 @@ Private Function SaveAsWorkBookCore(book As Workbook, filePath As String, fileNa
     Dim lastErrDescription As String
 
     ' ブックを保存する
+    Application.DisplayAlerts = False
     On Error Resume Next
     Err = 0
     Call book.SaveAs(filePath & "\" & fileName)
     lastErr = Err
     lastErrDescription = Err.description
     On Error GoTo 0
+    Application.DisplayAlerts = True
     
     ' 保存に失敗したか
     If lastErr <> 0 Then
