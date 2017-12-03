@@ -7,7 +7,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-Option Explicit On
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -59,71 +59,253 @@ Option Explicit On
 
 Implements ILog
 
+Private children As Collection
+
+Private appenders As Collection
+
+Private isDebugEnabled_ As Boolean
+Private isErrorEnabled_ As Boolean
+Private isFatalEnabled_ As Boolean
+Private isInfoEnabled_ As Boolean
+Private isWarnEnabled_ As Boolean
+
+Private Sub Class_Initialize()
+
+    Set appenders = New Collection
+    
+    isDebugEnabled_ = False
+    isErrorEnabled_ = True
+    isFatalEnabled_ = True
+    isInfoEnabled_ = True
+    isWarnEnabled_ = True
+
+End Sub
+
+Private Sub ILog_ClearChildren()
+    Set children = Nothing
+End Sub
+
+Private Property Let ILog_IsDebugEnabled(isDebugEnabled__ As Boolean)
+    isDebugEnabled_ = isDebugEnabled__
+End Property
+
+Private Property Let ILog_IsErrorEnabled(isErrorEnabled__ As Boolean)
+    isErrorEnabled_ = isErrorEnabled__
+End Property
+
+Private Property Let ILog_IsFatalEnabled(isFatalEnabled__ As Boolean)
+    isFatalEnabled_ = isFatalEnabled__
+End Property
+
+Private Property Let ILog_IsInfoEnabled(isInfoEnabled__ As Boolean)
+    isInfoEnabled_ = isInfoEnabled__
+End Property
+
+Private Property Let ILog_IsWarnEnabled(isWarnEnabled__ As Boolean)
+    isWarnEnabled_ = isWarnEnabled__
+End Property
+
+Private Sub ILog_RegistChild(child As ILog)
+    If children Is Nothing Then
+        Set children = New Collection
+    End If
+    Call children.Add(child)
+End Sub
+
+Private Sub ILog_ClearAppenders()
+    Set appenders = New Collection
+End Sub
+
+Private Sub ILog_RegistAppender(appender As IAppender)
+    Call appenders.Add(appender)
+End Sub
+
 Private Property Get ILog_IsDebugEnabled() As Boolean
-    ILog_IsDebugEnabled = IsEnabledCore(LvlDebug)
+
+    Dim result As Boolean
+    result = isDebugEnabled_
+    
+    If result = False And Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsDebugEnabled = True Then
+                result = True
+            End If
+        Next
+    End If
+    
+    ILog_IsDebugEnabled = result
+    
 End Property
 
 Private Property Get ILog_IsErrorEnabled() As Boolean
-    ILog_IsErrorEnabled = IsEnabledCore(LvlError)
+
+    Dim result As Boolean
+    result = isErrorEnabled_
+    
+    If result = False And Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsErrorEnabled = True Then
+                result = True
+            End If
+        Next
+    End If
+
+    ILog_IsErrorEnabled = result
+
 End Property
 
 Private Property Get ILog_IsFatalEnabled() As Boolean
-    ILog_IsFatalEnabled = IsEnabledCore(LvlFatal)
+
+    Dim result As Boolean
+    result = isFatalEnabled_
+    
+    If result = False And Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsFatalEnabled = True Then
+                result = True
+            End If
+        Next
+    End If
+
+    ILog_IsFatalEnabled = result
+
 End Property
 
 Private Property Get ILog_IsInfoEnabled() As Boolean
-    ILog_IsInfoEnabled = IsEnabledCore(LvlInfo)
+
+    Dim result As Boolean
+    result = isInfoEnabled_
+    
+    If result = False And Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsInfoEnabled = True Then
+                result = True
+            End If
+        Next
+    End If
+
+    ILog_IsInfoEnabled = result
+
 End Property
 
 Private Property Get ILog_IsWarnEnabled() As Boolean
-    ILog_IsWarnEnabled = IsEnabledCore(LvlWarn)
+
+    Dim result As Boolean
+    result = isWarnEnabled_
+    
+    If result = False And Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsWarnEnabled = True Then
+                result = True
+            End If
+        Next
+    End If
+
+    ILog_IsWarnEnabled = result
+
 End Property
 
-Private Function IsEnabledCore(loglevel_ As LogLevel) As Boolean
-    ' TODO: 開発中の実装。
-    IsEnabledCore = True
-End Function
-
 Private Sub ILog_LogDebug(message_ As String)
-    If ILog_IsDebugEnabled = True Then
+
+    If isDebugEnabled_ = True Then
         Call LogCore(LvlDebug, message_)
     End If
+    
+    If Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsDebugEnabled = True Then
+                Call child.LogDebug(message_)
+            End If
+        Next
+    End If
+    
 End Sub
 
 Private Sub ILog_LogError(message_ As String)
-    If ILog_IsErrorEnabled = True Then
+
+    If isErrorEnabled_ = True Then
         Call LogCore(LvlError, message_)
     End If
+    
+    If Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsErrorEnabled = True Then
+                Call child.LogError(message_)
+            End If
+        Next
+    End If
+    
 End Sub
 
 Private Sub ILog_LogFatal(message_ As String)
-    If ILog_IsFatalEnabled = True Then
+
+    If isFatalEnabled_ = True Then
         Call LogCore(LvlFatal, message_)
     End If
+    
+    If Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsFatalEnabled = True Then
+                Call child.LogFatal(message_)
+            End If
+        Next
+    End If
+    
 End Sub
 
 Private Sub ILog_LogInfo(message_ As String)
-    If ILog_IsInfoEnabled = True Then
+
+    If isInfoEnabled_ = True Then
         Call LogCore(LvlInfo, message_)
     End If
+    
+    If Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsInfoEnabled = True Then
+                Call child.LogInfo(message_)
+            End If
+        Next
+    End If
+    
 End Sub
 
 Private Sub ILog_LogWarn(message_ As String)
-    If ILog_IsWarnEnabled = True Then
+
+    If isWarnEnabled_ = True Then
         Call LogCore(LvlWarn, message_)
     End If
+    
+    If Not (children Is Nothing) Then
+        Dim child As ILog
+        For Each child In children
+            If child.IsWarnEnabled = True Then
+                Call child.LogWarn(message_)
+            End If
+        Next
+    End If
+    
 End Sub
 
 Private Sub LogCore(loglevel_ As LogLevel, message_ As String)
 
     Dim loggingEvent As CLoggingEvent
     Set loggingEvent = New CLoggingEvent
+    
     loggingEvent.LogLevel = loglevel_
     loggingEvent.message = message_
-
-    ' TODO: 開発中の実装。最終的にはIAppender のコレクションを LogManager に持たせる
+    
     Dim appender As IAppender
-    Set appender = New DebugPrintAppender
-    Call appender.DoAppend(loggingEvent)
-
+    For Each appender In appenders
+        Call appender.DoAppend(loggingEvent)
+    Next
+    
 End Sub

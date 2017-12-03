@@ -59,16 +59,42 @@ Option Explicit
 
 Implements IAppender
 
+' このオブジェクトの名称を保持します。
+Private name_ As String
+
+' -----------------------------------------------------------------------------
+' DebugPrintAppender クラスの新しいインスタンスを初期化します。
+' -----------------------------------------------------------------------------
+Private Sub Class_Initialize()
+    name_ = "DebugPrintAppender"
+End Sub
+
+' -----------------------------------------------------------------------------
+' Appender を閉じます。
+' -----------------------------------------------------------------------------
 Private Sub IAppender_AppenderClose()
     ' NOP
 End Sub
 
+' -----------------------------------------------------------------------------
+' CLoggingEvent を追加します。
+' -----------------------------------------------------------------------------
 Private Sub IAppender_DoAppend(loggingEvent As CLoggingEvent)
     Debug.Print loggingEvent.TimeStamp & vbTab & _
                 GetLogLevelString(loggingEvent.LogLevel) & vbTab & _
                 loggingEvent.message
 End Sub
 
+' -----------------------------------------------------------------------------
+' このオブジェクトの名称を取得します。
+' -----------------------------------------------------------------------------
 Private Property Get IAppender_Name() As String
-    IAppender_Name = "DebugPrintAppender"
+    IAppender_Name = name_
+End Property
+
+' -----------------------------------------------------------------------------
+' このオブジェクトの名称を設定します。
+' -----------------------------------------------------------------------------
+Public Property Let Name(name__ As String)
+    name_ = name__
 End Property

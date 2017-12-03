@@ -1,5 +1,5 @@
 Attribute VB_Name = "LogManager"
-Option Explicit On
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -49,20 +49,57 @@ Option Explicit On
 
 ' Dependency: None
 
-Private logger As ILog
+#Const ENABLE_TEST_METHODS = 1
 
-Public Function GetLogger() As ILog
+Private defaultLogger As ILog
 
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
+Private loggers As Object
+
+Public Function GetDefaultLogger() As ILog
+    
+    If defaultLogger Is Nothing Then
+        Set defaultLogger = New LoggerCore
+'        Debug.Print "new LoggerCore created."
     End If
     
-    Set GetLogger = logger
+    Set GetDefaultLogger = defaultLogger
 
 End Function
+
+Private Sub InitLoggers()
+    If loggers Is Nothing Then
+        Set loggers = CreateObject("Scripting.Dictionary")
+    End If
+End Sub
+
+Public Function ClearLoggers()
+    Call InitLoggers
+    Call loggers.RemoveAll
+End Function
+
+Public Sub RegistLogger(key As String, logger As ILog)
+    Call InitLoggers
+    Call loggers.Add(key, logger)
+End Sub
+
+Public Function GetLogger(key As String) As ILog
+    Call InitLoggers
+    If Not loggers.Exists(key) Then
+        Call GetDefaultLogger.LogFatal("[GetLogger] ÉLÅ[ '" & key & "' Ç™å©Ç¬Ç©ÇËÇ‹ÇπÇÒÅB")
+        Exit Function
+    End If
+    Set GetLogger = loggers.Item(key)
+End Function
+
+#If ENABLE_TEST_METHODS = 1 Then
 
 Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
+    Call GetDefaultLogger.ClearAppenders
+    Call GetDefaultLogger.RegistAppender(New DebugPrintAppender)
+    Call GetDefaultLogger.RegistAppender(New OutputDebugStringAppender)
+    Call GetDefaultLogger.RegistAppender(New textFileAppender)
+    GetDefaultLogger.LogDebug "test"
+    GetDefaultLogger.LogFatal "test"
 End Function
+
+#End If

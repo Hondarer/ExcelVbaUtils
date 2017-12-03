@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "CLoggingEvent"
+Attribute VB_Name = "OutputDebugStringAppender"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
@@ -55,81 +55,47 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: TimeUtility
+' Dependency: IAppender, CLoggingEvent, PInvoke
 
-Dim timeStamp_ As String
+' このオブジェクトの名称を保持します。
+Implements IAppender
 
-Dim loglevel_ As LogLevel
-
-Dim machineName_ As String
-
-Dim clientName_ As String
-
-Dim userDomainAndName_ As String
-
-Dim message_ As String
+Private name_ As String
 
 ' -----------------------------------------------------------------------------
-' CLoggingEvent の新しいインスタンスを初期化します。
+' OutputDebugStringAppender クラスの新しいインスタンスを初期化します。
 ' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
-    timeStamp_ = LocalNowToString(LONGTIME_WITH_MSEC)
-    machineName_ = Environ("COMPUTERNAME")
-    clientName_ = Environ("CLIENTNAME")
-    userDomainAndName_ = Environ("USERDOMAIN") & "\" & Environ("USERNAME")
+    name_ = "OutputDebugStringAppender"
 End Sub
 
 ' -----------------------------------------------------------------------------
-' タイムスタンプを取得します。
+' Appender を閉じます。
 ' -----------------------------------------------------------------------------
-Public Property Get TimeStamp() As String
-    TimeStamp = timeStamp_
-End Property
+Private Sub IAppender_AppenderClose()
+    ' NOP
+End Sub
 
 ' -----------------------------------------------------------------------------
-' コンピューター名を取得します。
+' CLoggingEvent を追加します。
 ' -----------------------------------------------------------------------------
-Public Property Get MachineName() As String
-    MachineName = machineName_
-End Property
+Private Sub IAppender_DoAppend(loggingEvent As CLoggingEvent)
+    Call OutputDebugString(loggingEvent.TimeStamp & vbTab & _
+                           GetLogLevelString(loggingEvent.LogLevel) & vbTab & _
+                           loggingEvent.message)
+End Sub
 
 ' -----------------------------------------------------------------------------
-' 端末名を取得します。
+' このオブジェクトの名称を取得します。
 ' -----------------------------------------------------------------------------
-Public Property Get ClientName() As String
-    ClientName = clientName_
+Private Property Get IAppender_Name() As String
+    IAppender_Name = name_
+End Property
+' -----------------------------------------------------------------------------
+' このオブジェクトの名称を設定します。
+' -----------------------------------------------------------------------------
+Public Property Let Name(name__ As String)
+    name_ = name__
 End Property
 
-' -----------------------------------------------------------------------------
-' ドメイン名を含むユーザー名を取得します。
-' -----------------------------------------------------------------------------
-Public Property Get UserDomainAndName() As String
-    UserDomainAndName = userDomainAndName_
-End Property
-
-' -----------------------------------------------------------------------------
-' メッセージを取得します。
-' -----------------------------------------------------------------------------
-Public Property Get LogLevel() As LogLevel
-    LogLevel = loglevel_
-End Property
-' -----------------------------------------------------------------------------
-' メッセージを設定します。
-' -----------------------------------------------------------------------------
-Property Let LogLevel(loglevel__ As LogLevel)
-    loglevel_ = loglevel__
-End Property
-
-' -----------------------------------------------------------------------------
-' メッセージを取得します。
-' -----------------------------------------------------------------------------
-Public Property Get message() As String
-    message = message_
-End Property
-' -----------------------------------------------------------------------------
-' メッセージを設定します。
-' -----------------------------------------------------------------------------
-Property Let message(message__ As String)
-    message_ = message__
-End Property
 
