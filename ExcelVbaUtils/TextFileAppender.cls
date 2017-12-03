@@ -59,11 +59,22 @@ Option Explicit
 
 Implements IAppender
 
+' -----------------------------------------------------------------------------
+' ログファイルのローテーション種別を定義します。
+' -----------------------------------------------------------------------------
+Public Enum TextFileAppender_LotationKind
+    None = 0
+    Monthly = 2
+End Enum
+
 ' このオブジェクトの名称を保持します。
 Private name_ As String
 
 ' この Appender の出力先パスを保持します。
 Private filePath_ As String
+
+' ローテーション種別を保持します。
+Private lotationKind_ As TextFileAppender_LotationKind
 
 ' -----------------------------------------------------------------------------
 ' DebugPrintAppender クラスの新しいインスタンスを初期化します。
@@ -71,6 +82,7 @@ Private filePath_ As String
 Private Sub Class_Initialize()
     name_ = "TextFileAppender"
     filePath_ = ThisWorkbook.Path & "\" & RemoveExtension(ThisWorkbook.Name) & ".log"
+    lotationKind_ = Monthly
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -85,11 +97,21 @@ End Sub
 ' -----------------------------------------------------------------------------
 Private Sub IAppender_DoAppend(loggingEvent As CLoggingEvent)
     
+    Dim appendFilePath As String
     Dim fileno As Long
     fileno = FreeFile
     
+    Select Case lotationKind_
+        Case None
+            appendFilePath = filePath_
+        Case Monthly
+            appendFilePath = RemoveExtension(filePath_) & Format(Now, "_yyyymm") & GetExtension(filePath_)
+        Case Else
+            appendFilePath = filePath_
+    End Select
+    
     On Error GoTo errHandler
-        Open filePath_ For Append As fileno
+        Open appendFilePath For Append As fileno
             Print #fileno, loggingEvent.TimeStamp & vbTab & _
                            GetLogLevelString(loggingEvent.LogLevel) & vbTab & _
                            loggingEvent.MachineName & vbTab & _
