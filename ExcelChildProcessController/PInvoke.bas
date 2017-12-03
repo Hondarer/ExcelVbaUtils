@@ -200,4 +200,6 @@ Public Declare Sub GetSystemTime Lib "kernel32" ( _
 Public Declare Sub GetLocalTime Lib "kernel32" ( _
     ByRef lpSystemTime As SYSTEMTIME)
 
+Public Declare Sub OutputDebugString Lib "kernel32" Alias "OutputDebugStringA" ( _
+    ByVal lpOutputString As String)
 
