@@ -1,5 +1,13 @@
-Attribute VB_Name = "LogManager"
-Option Explicit On
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "DebugPrintAppender"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -47,22 +55,20 @@ Option Explicit On
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: None
+' Dependency: IAppender, CLoggingEvent
 
-Private logger As ILog
+Implements IAppender
 
-Public Function GetLogger() As ILog
+Private Sub IAppender_AppenderClose()
+    ' NOP
+End Sub
 
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
-    End If
-    
-    Set GetLogger = logger
+Private Sub IAppender_DoAppend(loggingEvent As CLoggingEvent)
+    Debug.Print loggingEvent.TimeStamp & vbTab & _
+                GetLogLevelString(loggingEvent.LogLevel) & vbTab & _
+                loggingEvent.message
+End Sub
 
-End Function
-
-Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
-End Function
+Private Property Get IAppender_Name() As String
+    IAppender_Name = "DebugPrintAppender"
+End Property

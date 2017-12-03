@@ -1,5 +1,13 @@
-Attribute VB_Name = "LogManager"
-Option Explicit On
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "TimeUtility"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -47,22 +55,33 @@ Option Explicit On
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: None
-
-Private logger As ILog
-
-Public Function GetLogger() As ILog
-
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
+' Dependency: PInvoke
+ 
+Public Enum TimeUtility_ToStringType
+    LONGTIME_WITH_MSEC = 0
+End Enum
+ 
+Private Sub GetTimeCore(ByRef st As SYSTEMTIME, localTime As Boolean)
+    If localTime <> True Then
+        Call GetSystemTime(st)
+    Else
+        Call GetLocalTime(st)
     End If
+End Sub
+ 
+Public Function LocalNowToString(toStringType As TimeUtility_ToStringType) As String
+
+    Dim st As SYSTEMTIME
     
-    Set GetLogger = logger
+    Call GetTimeCore(st, True)
+
+    LocalNowToString = Format(st.wYear, "0000") & "/" & _
+                       Format(st.wMonth, "00") & "/" & _
+                       Format(st.wDay, "00") & " " & _
+                       Format(st.wHour, "00") & ":" & _
+                       Format(st.wMinute, "00") & ":" & _
+                       Format(st.wSecond, "00") & "." & _
+                       Format(st.wMilliseconds, "000")
 
 End Function
 
-Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
-End Function

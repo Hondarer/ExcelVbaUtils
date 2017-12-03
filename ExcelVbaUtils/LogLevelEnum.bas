@@ -1,5 +1,5 @@
-Attribute VB_Name = "LogManager"
-Option Explicit On
+Attribute VB_Name = "LogLevelEnum"
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -49,20 +49,26 @@ Option Explicit On
 
 ' Dependency: None
 
-Private logger As ILog
+Public Enum LogLevel
+    LvlDebug = 0
+    LvlInfo = 1
+    LvlWarn = 2
+    LvlError = 3
+    LvlFatal = 4
+End Enum
 
-Public Function GetLogger() As ILog
-
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
-    End If
-    
-    Set GetLogger = logger
-
+Public Function GetLogLevelString(loglevel_ As LogLevel) As String
+    Select Case loglevel_
+        Case LvlDebug
+            GetLogLevelString = "Debug"
+        Case LvlInfo
+            GetLogLevelString = "Info"
+        Case LvlWarn
+            GetLogLevelString = "Warn"
+        Case LvlError
+            GetLogLevelString = "Error"
+        Case LvlFatal
+            GetLogLevelString = "Fatal"
+    End Select
 End Function
 
-Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
-End Function

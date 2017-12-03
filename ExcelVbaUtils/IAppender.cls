@@ -1,5 +1,13 @@
-Attribute VB_Name = "LogManager"
-Option Explicit On
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "IAppender"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -47,22 +55,23 @@ Option Explicit On
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: None
+' Dependency: CLoggingEvent
 
-Private logger As ILog
+' -----------------------------------------------------------------------------
+' Appender を閉じます。
+' -----------------------------------------------------------------------------
+Public Sub AppenderClose()
+End Sub
 
-Public Function GetLogger() As ILog
+' -----------------------------------------------------------------------------
+' CLoggingEvent を追加します。
+' -----------------------------------------------------------------------------
+Public Sub DoAppend(loggingEvent As CLoggingEvent)
+End Sub
 
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
-    End If
-    
-    Set GetLogger = logger
+' -----------------------------------------------------------------------------
+' このオブジェクトの名称を取得します。
+' -----------------------------------------------------------------------------
+Public Property Get Name() As String
+End Property
 
-End Function
-
-Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
-End Function

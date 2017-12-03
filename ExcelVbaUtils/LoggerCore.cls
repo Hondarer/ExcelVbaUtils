@@ -7,46 +7,123 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-Option Explicit
+Option Explicit On
+' -----------------------------------------------------------------------------
+' ExcelVbaUtils
+' https://github.com/Hondarer/ExcelVbaUtils
+' -----------------------------------------------------------------------------
+' MIT License
+'
+' Copyright (c) 2017 Tetsuo Honda
+' t-honda@hondarer-soft.com
+'
+' Permission is hereby granted, free of charge, to any person obtaining a copy
+' of this software and associated documentation files (the "Software"), to deal
+' in the Software without restriction, including without limitation the rights
+' to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+' copies of the Software, and to permit persons to whom the Software is
+' furnished to do so, subject to the following conditions:
+'
+' The above copyright notice and this permission notice shall be included in all
+' copies or substantial portions of the Software.
+'
+' THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+' IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+' FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+' AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+' LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+' OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+' SOFTWARE.
+'
+' 以下に定める条件に従い、本ソフトウェアおよび関連文書のファイル
+' （以下「ソフトウェア」）の複製を取得するすべての人に対し、ソフトウェアを
+' 無制限に扱うことを無償で許可します。これには、ソフトウェアの複製を使用、複写、
+' 変更、結合、掲載、頒布、サブライセンス、および/または販売する権利、
+' およびソフトウェアを提供する相手に同じことを許可する権利も無制限に含まれます。
+'
+' 上記の著作権表示および本許諾表示を、ソフトウェアのすべての複製または重要な
+' 部分に記載するものとします。
+'
+' ソフトウェアは「現状のまま」で、明示であるか暗黙であるかを問わず、
+' 何らの保証もなく提供されます。
+' ここでいう保証とは、商品性、特定の目的への適合性、および権利非侵害についての
+' 保証も含みますが、それに限定されるものではありません。
+' 作者または著作権者は、契約行為、不法行為、またはそれ以外であろうと、
+' ソフトウェアに起因または関連し、あるいはソフトウェアの使用またはその他の
+' 扱いによって生じる一切の請求、損害、その他の義務について何らの責任も負わない
+' ものとします。
+'
+' -----------------------------------------------------------------------------
+
+' Dependency: IAppender, CLoggingEvent
 
 Implements ILog
 
 Private Property Get ILog_IsDebugEnabled() As Boolean
-
+    ILog_IsDebugEnabled = IsEnabledCore(LvlDebug)
 End Property
 
 Private Property Get ILog_IsErrorEnabled() As Boolean
-
+    ILog_IsErrorEnabled = IsEnabledCore(LvlError)
 End Property
 
 Private Property Get ILog_IsFatalEnabled() As Boolean
-
+    ILog_IsFatalEnabled = IsEnabledCore(LvlFatal)
 End Property
 
 Private Property Get ILog_IsInfoEnabled() As Boolean
-
+    ILog_IsInfoEnabled = IsEnabledCore(LvlInfo)
 End Property
 
 Private Property Get ILog_IsWarnEnabled() As Boolean
-
+    ILog_IsWarnEnabled = IsEnabledCore(LvlWarn)
 End Property
 
-Private Sub ILog_LogDebug(message As String)
-    Debug.Print "Hello" & message
+Private Function IsEnabledCore(loglevel_ As LogLevel) As Boolean
+    ' TODO: 開発中の実装。
+    IsEnabledCore = True
+End Function
+
+Private Sub ILog_LogDebug(message_ As String)
+    If ILog_IsDebugEnabled = True Then
+        Call LogCore(LvlDebug, message_)
+    End If
 End Sub
 
-Private Sub ILog_LogError(message As String)
-
+Private Sub ILog_LogError(message_ As String)
+    If ILog_IsErrorEnabled = True Then
+        Call LogCore(LvlError, message_)
+    End If
 End Sub
 
-Private Sub ILog_LogFatal(message As String)
-
+Private Sub ILog_LogFatal(message_ As String)
+    If ILog_IsFatalEnabled = True Then
+        Call LogCore(LvlFatal, message_)
+    End If
 End Sub
 
-Private Sub ILog_LogInfo(message As String)
-
+Private Sub ILog_LogInfo(message_ As String)
+    If ILog_IsInfoEnabled = True Then
+        Call LogCore(LvlInfo, message_)
+    End If
 End Sub
 
-Private Sub ILog_LogWarn(message As String)
+Private Sub ILog_LogWarn(message_ As String)
+    If ILog_IsWarnEnabled = True Then
+        Call LogCore(LvlWarn, message_)
+    End If
+End Sub
+
+Private Sub LogCore(loglevel_ As LogLevel, message_ As String)
+
+    Dim loggingEvent As CLoggingEvent
+    Set loggingEvent = New CLoggingEvent
+    loggingEvent.LogLevel = loglevel_
+    loggingEvent.message = message_
+
+    ' TODO: 開発中の実装。最終的にはIAppender のコレクションを LogManager に持たせる
+    Dim appender As IAppender
+    Set appender = New DebugPrintAppender
+    Call appender.DoAppend(loggingEvent)
 
 End Sub

@@ -1,5 +1,13 @@
-Attribute VB_Name = "LogManager"
-Option Explicit On
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "CLoggingEvent"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
 ' -----------------------------------------------------------------------------
 ' ExcelVbaUtils
 ' https://github.com/Hondarer/ExcelVbaUtils
@@ -47,22 +55,52 @@ Option Explicit On
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: None
+' Dependency: TimeUtility
 
-Private logger As ILog
+Dim timeStamp_ As String
 
-Public Function GetLogger() As ILog
+Dim loglevel_ As LogLevel
 
-    If logger Is Nothing Then
-        Set logger = New LoggerCore
-        Debug.Print "new LoggerCore created."
-    End If
-    
-    Set GetLogger = logger
+Dim message_ As String
 
-End Function
+' -----------------------------------------------------------------------------
+' CLoggingEvent の新しいインスタンスを初期化します。
+' -----------------------------------------------------------------------------
+Private Sub Class_Initialize()
+    Dim timeUtil As New TimeUtility
+    timeStamp_ = timeUtil.LocalNowToString(LONGTIME_WITH_MSEC)
+End Sub
 
-Public Function test()
-    GetLogger.LogDebug "test"
-    GetLogger.LogFatal "test"
-End Function
+' -----------------------------------------------------------------------------
+' タイムスタンプを取得します。
+' -----------------------------------------------------------------------------
+Public Property Get TimeStamp() As String
+    TimeStamp = timeStamp_
+End Property
+
+' -----------------------------------------------------------------------------
+' メッセージを取得します。
+' -----------------------------------------------------------------------------
+Public Property Get LogLevel() As LogLevel
+    LogLevel = loglevel_
+End Property
+' -----------------------------------------------------------------------------
+' メッセージを設定します。
+' -----------------------------------------------------------------------------
+Property Let LogLevel(loglevel__ As LogLevel)
+    loglevel_ = loglevel__
+End Property
+
+' -----------------------------------------------------------------------------
+' メッセージを取得します。
+' -----------------------------------------------------------------------------
+Public Property Get message() As String
+    message = message_
+End Property
+' -----------------------------------------------------------------------------
+' メッセージを設定します。
+' -----------------------------------------------------------------------------
+Property Let message(message__ As String)
+    message_ = message__
+End Property
+
