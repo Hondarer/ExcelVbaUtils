@@ -51,6 +51,9 @@ Option Explicit
 
 #Const ENABLE_TEST_METHODS = 1
 
+' フォールバック用の Logger を保持します。
+Private fallbackLogger As ILog
+
 ' デフォルトの Logger を保持します。
 Private defaultLogger As ILog
 
@@ -64,12 +67,23 @@ Private loggers As Object
 Public Function GetDefaultLogger() As ILog
     
     If defaultLogger Is Nothing Then
-        Set defaultLogger = New LoggerCore
+        If fallbackLogger Is Nothing Then
+            Set fallbackLogger = New fallbackLogger
+        End If
+        Set GetDefaultLogger = fallbackLogger
+        Exit Function
     End If
     
     Set GetDefaultLogger = defaultLogger
 
 End Function
+
+' -----------------------------------------------------------------------------
+' デフォルトの Logger を設定します｡
+' -----------------------------------------------------------------------------
+Public Sub SetDefaultLogger(defaultLogger_ As ILog)
+    Set defaultLogger = defaultLogger_
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' カテゴリ別の Logger のイニシャルチェックを行います。
@@ -103,6 +117,7 @@ Public Function GetLogger(key As String) As ILog
     Call InitLoggers
     If Not loggers.Exists(key) Then
         Call GetDefaultLogger.LogFatal("[GetLogger] キー '" & key & "' が見つかりません。")
+        Set GetLogger = GetDefaultLogger
         Exit Function
     End If
     Set GetLogger = loggers.Item(key)
@@ -110,13 +125,18 @@ End Function
 
 #If ENABLE_TEST_METHODS = 1 Then
 
-Public Function test()
+Public Function Test()
     Call GetDefaultLogger.ClearAppenders
     Call GetDefaultLogger.RegistAppender(New DebugPrintAppender)
     Call GetDefaultLogger.RegistAppender(New OutputDebugStringAppender)
-    Call GetDefaultLogger.RegistAppender(New textFileAppender)
+    Call GetDefaultLogger.RegistAppender(New TextFileAppender)
     GetDefaultLogger.LogDebug "test"
     GetDefaultLogger.LogFatal "test"
+End Function
+
+Public Function FallbackTest()
+    GetDefaultLogger.LogDebug "test1"
+    GetLogger("Dummy").LogDebug "test2"
 End Function
 
 #End If

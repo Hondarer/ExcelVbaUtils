@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "LoggerCore"
+Attribute VB_Name = "FallbackLogger"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
@@ -55,324 +55,135 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: IAppender, CLoggingEvent, ILog
+' Dependency: ILog
 
 Implements ILog
-
-' 子の Logger のコレクションを保持します。
-Private children As Collection
-
-' この Logger の出力先の Appender を保持します。
-Private appenders As Collection
-
-' 開発用のデバッグメッセージの出力が有効かどうかを保持します。
-Private isDebugEnabled_ As Boolean
-' システム停止はしないが、問題となる障害の出力が有効かどうかを保持します。
-Private isErrorEnabled_ As Boolean
-' システム停止するような致命的な障害の出力が有効かどうかを保持します。
-Private isFatalEnabled_ As Boolean
-' 操作ログなどの情報の出力が有効かどうかを保持します。
-Private isInfoEnabled_ As Boolean
-' 障害ではない注意警告の出力が有効かどうかを保持します。
-Private isWarnEnabled_ As Boolean
-
-' -----------------------------------------------------------------------------
-' LoggerCore クラスの新しいインスタンスを初期化します。
-' -----------------------------------------------------------------------------
-Private Sub Class_Initialize()
-
-    Set appenders = New Collection
-    
-    isDebugEnabled_ = False
-    isErrorEnabled_ = True
-    isFatalEnabled_ = True
-    isInfoEnabled_ = True
-    isWarnEnabled_ = True
-
-End Sub
 
 ' -----------------------------------------------------------------------------
 ' 子の Logger のコレクションをクリアします。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_ClearChildren()
-    Set children = Nothing
+    ' NOP
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 子の Logger を登録します。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_RegistChild(child As ILog)
-    If children Is Nothing Then
-        Set children = New Collection
-    End If
-    Call children.Add(child)
+    ' NOP
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' この Logger の出力先の Appender をクリアします。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_ClearAppenders()
-    Set appenders = New Collection
+    ' NOP
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' この Logger の出力先の Appender を登録します。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_RegistAppender(appender As IAppender)
-    Call appenders.Add(appender)
+    ' NOP
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 開発用のデバッグメッセージの出力が有効かどうかを取得します。
 ' -----------------------------------------------------------------------------
 Private Property Get ILog_IsDebugEnabled() As Boolean
-
-    Dim result As Boolean
-    result = isDebugEnabled_
-    
-    If result = False And Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsDebugEnabled = True Then
-                result = True
-            End If
-        Next
-    End If
-    
-    ILog_IsDebugEnabled = result
-    
+    ILog_IsDebugEnabled = True
 End Property
 ' -----------------------------------------------------------------------------
 ' 開発用のデバッグメッセージの出力が有効かどうかを設定します。
 ' -----------------------------------------------------------------------------
 Private Property Let ILog_IsDebugEnabled(isDebugEnabled__ As Boolean)
-    isDebugEnabled_ = isDebugEnabled__
+    ' NOP
 End Property
 
 ' -----------------------------------------------------------------------------
 ' システム停止はしないが、問題となる障害の出力が有効かどうかを取得します。
 ' -----------------------------------------------------------------------------
 Private Property Get ILog_IsErrorEnabled() As Boolean
-
-    Dim result As Boolean
-    result = isErrorEnabled_
-    
-    If result = False And Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsErrorEnabled = True Then
-                result = True
-            End If
-        Next
-    End If
-
-    ILog_IsErrorEnabled = result
-
+    ILog_IsErrorEnabled = True
 End Property
 ' -----------------------------------------------------------------------------
 ' システム停止はしないが、問題となる障害の出力が有効かどうかを設定します。
 ' -----------------------------------------------------------------------------
 Private Property Let ILog_IsErrorEnabled(isErrorEnabled__ As Boolean)
-    isErrorEnabled_ = isErrorEnabled__
+    ' NOP
 End Property
 
 ' -----------------------------------------------------------------------------
 ' システム停止するような致命的な障害の出力が有効かどうかを取得します。
 ' -----------------------------------------------------------------------------
 Private Property Get ILog_IsFatalEnabled() As Boolean
-
-    Dim result As Boolean
-    result = isFatalEnabled_
-    
-    If result = False And Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsFatalEnabled = True Then
-                result = True
-            End If
-        Next
-    End If
-
-    ILog_IsFatalEnabled = result
-
+    ILog_IsFatalEnabled = True
 End Property
 ' -----------------------------------------------------------------------------
 ' システム停止するような致命的な障害の出力が有効かどうかを設定します。
 ' -----------------------------------------------------------------------------
 Private Property Let ILog_IsFatalEnabled(isFatalEnabled__ As Boolean)
-    isFatalEnabled_ = isFatalEnabled__
+    ' NOP
 End Property
 
 ' -----------------------------------------------------------------------------
 ' 操作ログなどの情報の出力が有効かどうかを取得します。
 ' -----------------------------------------------------------------------------
 Private Property Get ILog_IsInfoEnabled() As Boolean
-
-    Dim result As Boolean
-    result = isInfoEnabled_
-    
-    If result = False And Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsInfoEnabled = True Then
-                result = True
-            End If
-        Next
-    End If
-
-    ILog_IsInfoEnabled = result
-
+    ILog_IsInfoEnabled = True
 End Property
 ' -----------------------------------------------------------------------------
 ' 操作ログなどの情報の出力が有効かどうかを設定します。
 ' -----------------------------------------------------------------------------
 Private Property Let ILog_IsInfoEnabled(isInfoEnabled__ As Boolean)
-    isInfoEnabled_ = isInfoEnabled__
+    ' NOP
 End Property
 
 ' -----------------------------------------------------------------------------
 ' 障害ではない注意警告の出力が有効かどうかを取得します。
 ' -----------------------------------------------------------------------------
 Private Property Get ILog_IsWarnEnabled() As Boolean
-
-    Dim result As Boolean
-    result = isWarnEnabled_
-    
-    If result = False And Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsWarnEnabled = True Then
-                result = True
-            End If
-        Next
-    End If
-
-    ILog_IsWarnEnabled = result
-
+    ILog_IsWarnEnabled = True
 End Property
 ' -----------------------------------------------------------------------------
 ' 障害ではない注意警告の出力が有効かどうかを設定します。
 ' -----------------------------------------------------------------------------
 Private Property Let ILog_IsWarnEnabled(isWarnEnabled__ As Boolean)
-    isWarnEnabled_ = isWarnEnabled__
+    ' NOP
 End Property
 
 ' -----------------------------------------------------------------------------
 ' 開発用のデバッグメッセージの出力を行います。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_LogDebug(message_ As String)
-
-    If isDebugEnabled_ = True Then
-        Call LogCore(LvlDebug, message_)
-    End If
-    
-    If Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsDebugEnabled = True Then
-                Call child.LogDebug(message_)
-            End If
-        Next
-    End If
-    
+    Debug.Print message_
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' システム停止はしないが、問題となる障害の出力を行います。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_LogError(message_ As String)
-
-    If isErrorEnabled_ = True Then
-        Call LogCore(LvlError, message_)
-    End If
-    
-    If Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsErrorEnabled = True Then
-                Call child.LogError(message_)
-            End If
-        Next
-    End If
-    
+    Debug.Print message_
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' システム停止するような致命的な障害の出力を行います。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_LogFatal(message_ As String)
-
-    If isFatalEnabled_ = True Then
-        Call LogCore(LvlFatal, message_)
-    End If
-    
-    If Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsFatalEnabled = True Then
-                Call child.LogFatal(message_)
-            End If
-        Next
-    End If
-    
+    Debug.Print message_
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 操作ログなどの情報の出力を行います。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_LogInfo(message_ As String)
-
-    If isInfoEnabled_ = True Then
-        Call LogCore(LvlInfo, message_)
-    End If
-    
-    If Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsInfoEnabled = True Then
-                Call child.LogInfo(message_)
-            End If
-        Next
-    End If
-    
+    Debug.Print message_
 End Sub
 
 ' -----------------------------------------------------------------------------
 ' 障害ではない注意警告の出力を行います。
 ' -----------------------------------------------------------------------------
 Private Sub ILog_LogWarn(message_ As String)
-
-    If isWarnEnabled_ = True Then
-        Call LogCore(LvlWarn, message_)
-    End If
-    
-    If Not (children Is Nothing) Then
-        Dim child As ILog
-        For Each child In children
-            If child.IsWarnEnabled = True Then
-                Call child.LogWarn(message_)
-            End If
-        Next
-    End If
-    
+    Debug.Print message_
 End Sub
 
-' -----------------------------------------------------------------------------
-' ログの実処理を行います。
-' -----------------------------------------------------------------------------
-Private Sub LogCore(loglevel_ As LogLevel, message_ As String)
-
-    Dim loggingEvent As CLoggingEvent
-    Set loggingEvent = New CLoggingEvent
-    
-    loggingEvent.LogLevel = loglevel_
-    loggingEvent.message = message_
-    
-    Dim appender As IAppender
-    If Not (appenders Is Nothing) Then
-        For Each appender In appenders
-            Call appender.DoAppend(loggingEvent)
-        Next
-    End If
-    
-End Sub
