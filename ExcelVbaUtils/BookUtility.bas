@@ -213,17 +213,18 @@ End Function
 Private Function FindUniqueFileName(filePath As String, fileName As String) As String
     
     Dim seq As Long 'èdï°âÒîópÇÃí î‘
+    Dim baseName As String
     Dim seqedName As String
     Dim extension As String
     
-    extension = Mid(fileName, InStrRev(fileName, "."))
-    fileName = Left(fileName, Len(fileName) - Len(extension))
+    baseName = RemoveExtension(fileName)
+    extension = GetExtension(fileName)
 
     Do
         If seq = 0 Then
-            seqedName = fileName
+            seqedName = baseName
         Else
-            seqedName = fileName & "(" & seq & ")"
+            seqedName = baseName & "(" & seq & ")"
         End If
         
         If (Not FolderExists(filePath & "\" & seqedName & extension)) And _
