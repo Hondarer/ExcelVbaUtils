@@ -66,8 +66,10 @@ Implements IStateHandler
 Private Sub IStateHandler_OnStatusChanged(status As String)
     If status <> "" Then
         Application.StatusBar = status
+        GetDefaultLogger.LogInfo "[StateToStatusBar][IStateHandler_OnStatusChanged] Application.StatusBar=" & status
     Else
         Application.StatusBar = False
+        GetDefaultLogger.LogInfo "[StateToStatusBar][IStateHandler_OnStatusChanged] Application.StatusBar="
     End If
 End Sub
 

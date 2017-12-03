@@ -191,7 +191,7 @@ Public Function SendTextToStdin(sendstring As String) As Boolean
     End If
     
     If disableIoTrace_ <> True Then
-        Debug.Print "StdI " & sendstring; ' 改行しない
+        GetDefaultLogger.LogDebug "[ProcessController][SendTextToStdin] StdI " & sendstring
     End If
     
     writeBuffer = StrConv(sendstring, vbFromUnicode)
@@ -297,10 +297,10 @@ Public Function RequestTerminate(uExitCode As Long) As Boolean
         Exit Function
     End If
     
-    Debug.Print "Info ProcessController: Child process(pid=" & udtProcInfo.dwProcessId & ") request stop with code=" & uExitCode & "."
+    GetDefaultLogger.LogInfo "[ProcessController][RequestTerminate] Child process(pid=" & udtProcInfo.dwProcessId & ") request stop with code=" & uExitCode & "."
     
     If TerminateProcess(udtProcInfo.hProcess, uExitCode) = 0 Then
-        Debug.Print "Warn ProcessController: Child process(pid=" & udtProcInfo.dwProcessId & ") stop failed(in general it has already terminated)."
+        GetDefaultLogger.LogWarn "[ProcessController][RequestTerminate] Child process(pid=" & udtProcInfo.dwProcessId & ") stop failed(in general it has already terminated)."
         RequestTerminate = False
         Exit Function
     End If
@@ -336,6 +336,11 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     
     Dim sjisFirstByte As Byte
     Dim processRecv1Index As Long
+    
+    ' ログ管理機能の初期化
+    Call LogManagerHelper_LocalInit
+
+    GetDefaultLogger.LogInfo "[ProcessController][ExecuteProcess] 開始 commandLine=" & commandLine
 
     ' セキュリティディスクリプタの設定
     Call ZeroMemory(sa, Len(sa))
@@ -349,13 +354,13 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     If leaveStdin_ <> True Then
         ' 入力パイプの作成
         If CreatePipe(hInRead, hInWrite, sa, 0) = 0 Then
-            Debug.Print "入力パイプの作成に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] 入力パイプの作成に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
     
         ' 入力書き込みハンドルを子プロセスに継承できなくする
         If SetHandleInformation(hInWrite, HANDLE_FLAG_INHERIT, 0) = 0 Then
-            Debug.Print "入力パイプの書き込みハンドルの継承設定に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] 入力パイプの書き込みハンドルの継承設定に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
         
@@ -367,13 +372,13 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     If leaveStdout_ <> True Then
         ' 出力パイプの作成
         If CreatePipe(hOutRead, hOutWrite, sa, 0) = 0 Then
-            Debug.Print "出力パイプの作成に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] 出力パイプの作成に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
     
         ' 出力読み込みハンドルを子プロセスに継承できなくする
         If SetHandleInformation(hOutRead, HANDLE_FLAG_INHERIT, 0) = 0 Then
-            Debug.Print "出力パイプの読み込みハンドルの継承設定に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] 出力パイプの読み込みハンドルの継承設定に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
     
@@ -385,13 +390,13 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     If leaveStderr_ <> True Then
         ' エラー出力パイプの作成
         If CreatePipe(hErrRead, hErrWrite, sa, 0) = 0 Then
-            Debug.Print "エラー出力パイプの作成に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] エラー出力パイプの作成に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
     
         ' エラー出力読み込みハンドルを子プロセスに継承できなくする
         If SetHandleInformation(hErrRead, HANDLE_FLAG_INHERIT, 0) = 0 Then
-            Debug.Print "エラー出力パイプの読み込みハンドルの継承設定に失敗しました。エラーコード:" & Err.LastDllError
+            GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] エラー出力パイプの読み込みハンドルの継承設定に失敗しました Err.LastDllError=" & Err.LastDllError
             GoTo Error
         End If
     
@@ -412,10 +417,11 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     If CreateProcess(vbNullString, commandLine, ByVal 0&, ByVal 0&, 1&, _
         NORMAL_PRIORITY_CLASS, ByVal 0&, ThisWorkbook.Path, udtStartInfo, udtProcInfo) = 0 Then
         Call MsgBox("プロセスの生成に失敗しました。エラーコード:" & Err.LastDllError & vbCrLf & commandLine, Buttons:=vbCritical, Title:="エラー")
+        GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] プロセスの生成に失敗しました Err.LastDllError=" & Err.LastDllError
         GoTo Error
     End If
 
-    Debug.Print "Info ProcessController: Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") started up."
+    GetDefaultLogger.LogInfo "[ProcessController][ExecuteProcess] Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") started up."
    
     ' 接続完了コールバックを呼び出す
     If Not func Is Nothing Then
@@ -461,7 +467,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                     ' コールバック実施
                     If recvBuffer2Empty = True Then
                         If disableIoTrace_ <> True Then
-                            Debug.Print "StdO "
+                            GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdO "
                         End If
                         If Not func Is Nothing Then
                             Call func.OnRecieveLineFromStdout(Me, "")
@@ -469,7 +475,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                     Else
                         strBuffer = StrConv(recvBuffer2, vbUnicode)
                         If disableIoTrace_ <> True Then
-                            Debug.Print "StdO " & strBuffer
+                            GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdO " & strBuffer
                         End If
                         If Not func Is Nothing Then
                             Call func.OnRecieveLineFromStdout(Me, strBuffer)
@@ -525,7 +531,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                     ' コールバック実施
                     If errBuffer2Empty = True Then
                         If disableIoTrace_ <> True Then
-                            Debug.Print "StdE "
+                            GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdE "
                         End If
                         If Not func Is Nothing Then
                             Call func.OnRecieveLineFromStderr(Me, "")
@@ -533,7 +539,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
                     Else
                         strBuffer = StrConv(errBuffer2, vbUnicode)
                         If disableIoTrace_ <> True Then
-                            Debug.Print "StdE " & strBuffer
+                            GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdE " & strBuffer
                         End If
                         If Not func Is Nothing Then
                             Call func.OnRecieveLineFromStderr(Me, strBuffer)
@@ -574,7 +580,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
             If recvBuffer2Empty <> True Then
                 strBuffer = StrConv(recvBuffer2, vbUnicode)
                 If disableIoTrace_ <> True Then
-                    Debug.Print "StdO " & strBuffer
+                    GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdO " & strBuffer
                 End If
                 If Not func Is Nothing Then
                     Call func.OnRecieveLineFromStdout(Me, strBuffer)
@@ -586,7 +592,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
             If errBuffer2Empty <> True Then
                 strBuffer = StrConv(errBuffer2, vbUnicode)
                 If disableIoTrace_ <> True Then
-                    Debug.Print "StdE " & strBuffer
+                    GetDefaultLogger.LogDebug "[ProcessController][ExecuteProcess] StdE " & strBuffer
                 End If
                 If Not func Is Nothing Then
                     Call func.OnRecieveLineFromStderr(Me, strBuffer)
@@ -664,14 +670,13 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
     ' 戻り値の設定
     ExecuteProcess = procExitCode
     
-    Debug.Print "Info ProcessController: Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") has exited. code=" & procExitCode
+    GetDefaultLogger.LogInfo "[ProcessController][ExecuteProcess] 終了 Child process(" & commandLine & ", pid=" & udtProcInfo.dwProcessId & ") has exited. code=" & procExitCode
     
     Exit Function
 
 ' エラー処理
 Error:
 
-    Debug.Print "Warn ProcessController: Child process(" & commandLine & ") could not be executed with error."
     
     Application.Cursor = xlDefault
     
@@ -691,6 +696,8 @@ Error:
     
     ' 戻り値の設定
     ExecuteProcess = EXIT_FAILURE
+    
+    GetDefaultLogger.LogWarn "[ProcessController][ExecuteProcess] 終了 Child process(" & commandLine & ") could not be executed with error."
 
 End Function
 
@@ -776,8 +783,6 @@ End Sub
 ' インスタンスが破棄される際の処理をします。
 ' -----------------------------------------------------------------------------
 Private Sub Class_Terminate()
-
-'    Debug.Print "Info ProcessController: terminate."
 
     ' ハンドルを閉じる
     CloseHandle udtProcInfo.hThread

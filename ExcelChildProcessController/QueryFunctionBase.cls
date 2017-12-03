@@ -365,7 +365,7 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
         sender.RequestTerminate EXIT_FAILURE
     ElseIf isError = True And errorDescription = "" Then
         errorDescription = recvOutString
-        Debug.Print "Eror SimpleQueryFunction: " & errorDescription
+        GetDefaultLogger.LogError "[QueryFunctionBase][IProcessControlCallbacks_OnRecieveLineFromStdout] Oracle にてエラーが発生しました。" & errorDescription
         Call MsgBox("Oracle にてエラーが発生しました。" & vbCrLf & errorDescription, Buttons:=vbCritical, Title:="エラー")
         
         ' データを削除する
@@ -393,7 +393,7 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
                 sender.SendLineToStdin "set newpage 0"
                 sender.SendLineToStdin "set feedback off"
                 
-                Debug.Print "Info SimpleQueryFunction: " & sql
+                GetDefaultLogger.LogInfo "[QueryFunctionBase][IProcessControlCallbacks_OnRecieveLineFromStdout] sql=" & sql
                 
                 sender.SendLineToStdin sql
                 sender.SendLineToStdin "exit"
@@ -429,7 +429,7 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
         ' (区切られた要素の個数が予想される列数と一致していること)
         If UBound(data) = (realColumns - 1) Then
         
-'           Debug.Print "> " & data(0) & " / " & data(1)
+'           GetDefaultLogger.LogDebug "> " & data(0) & " / " & data(1)
 
             records = records + 1
             ReDim Preserve result(columns - 1, records)
