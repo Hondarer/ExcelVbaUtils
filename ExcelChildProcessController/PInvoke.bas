@@ -108,6 +108,17 @@ Public Type STARTUPINFO
     hStdError As Long
 End Type
 
+Public Type SYSTEMTIME
+    wYear As Integer
+    wMonth As Integer
+    wDayOfWeek As Integer
+    wDay As Integer
+    wHour As Integer
+    wMinute As Integer
+    wSecond As Integer
+    wMilliseconds As Integer
+End Type
+
 Public Declare Sub ZeroMemory Lib "kernel32" Alias "RtlZeroMemory" ( _
     ByRef dest As Any, _
     ByVal numBytes As Long)
@@ -182,4 +193,11 @@ Public Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
     ByRef Destination As Byte, _
     ByRef Source As Byte, _
     ByVal Length As Long)
+
+Public Declare Sub GetSystemTime Lib "kernel32" ( _
+    ByRef lpSystemTime As SYSTEMTIME)
+
+Public Declare Sub GetLocalTime Lib "kernel32" ( _
+    ByRef lpSystemTime As SYSTEMTIME)
+
 
