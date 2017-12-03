@@ -55,7 +55,7 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: IAppender, CLoggingEvent
+' Dependency: IAppender, CLoggingEvent, LogLevelEnum
 
 Implements IAppender
 
@@ -88,10 +88,9 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' このオブジェクトの名称を取得します。
 ' -----------------------------------------------------------------------------
-Private Property Get IAppender_Name() As String
+Public Property Get IAppender_Name() As String
     IAppender_Name = name_
 End Property
-
 ' -----------------------------------------------------------------------------
 ' このオブジェクトの名称を設定します。
 ' -----------------------------------------------------------------------------

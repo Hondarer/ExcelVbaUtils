@@ -55,20 +55,30 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: IAppender, CLoggingEvent
+' Dependency: IAppender, CLoggingEvent, ILog
 
 Implements ILog
 
+' 子の Logger のコレクションを保持します。
 Private children As Collection
 
+' この Logger の出力先の Appender を保持します。
 Private appenders As Collection
 
+' 開発用のデバッグメッセージの出力が有効かどうかを保持します。
 Private isDebugEnabled_ As Boolean
+' システム停止はしないが、問題となる障害の出力が有効かどうかを保持します。
 Private isErrorEnabled_ As Boolean
+' システム停止するような致命的な障害の出力が有効かどうかを保持します。
 Private isFatalEnabled_ As Boolean
+' 操作ログなどの情報の出力が有効かどうかを保持します。
 Private isInfoEnabled_ As Boolean
+' 障害ではない注意警告の出力が有効かどうかを保持します。
 Private isWarnEnabled_ As Boolean
 
+' -----------------------------------------------------------------------------
+' LoggerCore クラスの新しいインスタンスを初期化します。
+' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
 
     Set appenders = New Collection
@@ -81,30 +91,16 @@ Private Sub Class_Initialize()
 
 End Sub
 
+' -----------------------------------------------------------------------------
+' 子の Logger のコレクションをクリアします。
+' -----------------------------------------------------------------------------
 Private Sub ILog_ClearChildren()
     Set children = Nothing
 End Sub
 
-Private Property Let ILog_IsDebugEnabled(isDebugEnabled__ As Boolean)
-    isDebugEnabled_ = isDebugEnabled__
-End Property
-
-Private Property Let ILog_IsErrorEnabled(isErrorEnabled__ As Boolean)
-    isErrorEnabled_ = isErrorEnabled__
-End Property
-
-Private Property Let ILog_IsFatalEnabled(isFatalEnabled__ As Boolean)
-    isFatalEnabled_ = isFatalEnabled__
-End Property
-
-Private Property Let ILog_IsInfoEnabled(isInfoEnabled__ As Boolean)
-    isInfoEnabled_ = isInfoEnabled__
-End Property
-
-Private Property Let ILog_IsWarnEnabled(isWarnEnabled__ As Boolean)
-    isWarnEnabled_ = isWarnEnabled__
-End Property
-
+' -----------------------------------------------------------------------------
+' 子の Logger を登録します。
+' -----------------------------------------------------------------------------
 Private Sub ILog_RegistChild(child As ILog)
     If children Is Nothing Then
         Set children = New Collection
@@ -112,14 +108,23 @@ Private Sub ILog_RegistChild(child As ILog)
     Call children.Add(child)
 End Sub
 
+' -----------------------------------------------------------------------------
+' この Logger の出力先の Appender をクリアします。
+' -----------------------------------------------------------------------------
 Private Sub ILog_ClearAppenders()
     Set appenders = New Collection
 End Sub
 
+' -----------------------------------------------------------------------------
+' この Logger の出力先の Appender を登録します。
+' -----------------------------------------------------------------------------
 Private Sub ILog_RegistAppender(appender As IAppender)
     Call appenders.Add(appender)
 End Sub
 
+' -----------------------------------------------------------------------------
+' 開発用のデバッグメッセージの出力が有効かどうかを取得します。
+' -----------------------------------------------------------------------------
 Private Property Get ILog_IsDebugEnabled() As Boolean
 
     Dim result As Boolean
@@ -137,7 +142,16 @@ Private Property Get ILog_IsDebugEnabled() As Boolean
     ILog_IsDebugEnabled = result
     
 End Property
+' -----------------------------------------------------------------------------
+' 開発用のデバッグメッセージの出力が有効かどうかを設定します。
+' -----------------------------------------------------------------------------
+Private Property Let ILog_IsDebugEnabled(isDebugEnabled__ As Boolean)
+    isDebugEnabled_ = isDebugEnabled__
+End Property
 
+' -----------------------------------------------------------------------------
+' システム停止はしないが、問題となる障害の出力が有効かどうかを取得します。
+' -----------------------------------------------------------------------------
 Private Property Get ILog_IsErrorEnabled() As Boolean
 
     Dim result As Boolean
@@ -155,7 +169,16 @@ Private Property Get ILog_IsErrorEnabled() As Boolean
     ILog_IsErrorEnabled = result
 
 End Property
+' -----------------------------------------------------------------------------
+' システム停止はしないが、問題となる障害の出力が有効かどうかを設定します。
+' -----------------------------------------------------------------------------
+Private Property Let ILog_IsErrorEnabled(isErrorEnabled__ As Boolean)
+    isErrorEnabled_ = isErrorEnabled__
+End Property
 
+' -----------------------------------------------------------------------------
+' システム停止するような致命的な障害の出力が有効かどうかを取得します。
+' -----------------------------------------------------------------------------
 Private Property Get ILog_IsFatalEnabled() As Boolean
 
     Dim result As Boolean
@@ -173,7 +196,16 @@ Private Property Get ILog_IsFatalEnabled() As Boolean
     ILog_IsFatalEnabled = result
 
 End Property
+' -----------------------------------------------------------------------------
+' システム停止するような致命的な障害の出力が有効かどうかを設定します。
+' -----------------------------------------------------------------------------
+Private Property Let ILog_IsFatalEnabled(isFatalEnabled__ As Boolean)
+    isFatalEnabled_ = isFatalEnabled__
+End Property
 
+' -----------------------------------------------------------------------------
+' 操作ログなどの情報の出力が有効かどうかを取得します。
+' -----------------------------------------------------------------------------
 Private Property Get ILog_IsInfoEnabled() As Boolean
 
     Dim result As Boolean
@@ -191,7 +223,16 @@ Private Property Get ILog_IsInfoEnabled() As Boolean
     ILog_IsInfoEnabled = result
 
 End Property
+' -----------------------------------------------------------------------------
+' 操作ログなどの情報の出力が有効かどうかを設定します。
+' -----------------------------------------------------------------------------
+Private Property Let ILog_IsInfoEnabled(isInfoEnabled__ As Boolean)
+    isInfoEnabled_ = isInfoEnabled__
+End Property
 
+' -----------------------------------------------------------------------------
+' 障害ではない注意警告の出力が有効かどうかを取得します。
+' -----------------------------------------------------------------------------
 Private Property Get ILog_IsWarnEnabled() As Boolean
 
     Dim result As Boolean
@@ -209,7 +250,16 @@ Private Property Get ILog_IsWarnEnabled() As Boolean
     ILog_IsWarnEnabled = result
 
 End Property
+' -----------------------------------------------------------------------------
+' 障害ではない注意警告の出力が有効かどうかを設定します。
+' -----------------------------------------------------------------------------
+Private Property Let ILog_IsWarnEnabled(isWarnEnabled__ As Boolean)
+    isWarnEnabled_ = isWarnEnabled__
+End Property
 
+' -----------------------------------------------------------------------------
+' 開発用のデバッグメッセージの出力を行います。
+' -----------------------------------------------------------------------------
 Private Sub ILog_LogDebug(message_ As String)
 
     If isDebugEnabled_ = True Then
@@ -227,6 +277,9 @@ Private Sub ILog_LogDebug(message_ As String)
     
 End Sub
 
+' -----------------------------------------------------------------------------
+' システム停止はしないが、問題となる障害の出力を行います。
+' -----------------------------------------------------------------------------
 Private Sub ILog_LogError(message_ As String)
 
     If isErrorEnabled_ = True Then
@@ -244,6 +297,9 @@ Private Sub ILog_LogError(message_ As String)
     
 End Sub
 
+' -----------------------------------------------------------------------------
+' システム停止するような致命的な障害の出力を行います。
+' -----------------------------------------------------------------------------
 Private Sub ILog_LogFatal(message_ As String)
 
     If isFatalEnabled_ = True Then
@@ -261,6 +317,9 @@ Private Sub ILog_LogFatal(message_ As String)
     
 End Sub
 
+' -----------------------------------------------------------------------------
+' 操作ログなどの情報の出力を行います。
+' -----------------------------------------------------------------------------
 Private Sub ILog_LogInfo(message_ As String)
 
     If isInfoEnabled_ = True Then
@@ -278,6 +337,9 @@ Private Sub ILog_LogInfo(message_ As String)
     
 End Sub
 
+' -----------------------------------------------------------------------------
+' 障害ではない注意警告の出力を行います。
+' -----------------------------------------------------------------------------
 Private Sub ILog_LogWarn(message_ As String)
 
     If isWarnEnabled_ = True Then
@@ -295,6 +357,9 @@ Private Sub ILog_LogWarn(message_ As String)
     
 End Sub
 
+' -----------------------------------------------------------------------------
+' ログの実処理を行います。
+' -----------------------------------------------------------------------------
 Private Sub LogCore(loglevel_ As LogLevel, message_ As String)
 
     Dim loggingEvent As CLoggingEvent

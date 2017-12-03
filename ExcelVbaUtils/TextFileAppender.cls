@@ -55,13 +55,14 @@ Option Explicit
 '
 ' -----------------------------------------------------------------------------
 
-' Dependency: IAppender, CLoggingEvent
+' Dependency: IAppender, CLoggingEvent, LogLevelEnum, FileUtility
 
 Implements IAppender
 
 ' このオブジェクトの名称を保持します。
 Private name_ As String
 
+' この Appender の出力先パスを保持します。
 Private filePath_ As String
 
 ' -----------------------------------------------------------------------------
@@ -69,8 +70,7 @@ Private filePath_ As String
 ' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
     name_ = "TextFileAppender"
-    
-    filePath_ = "log.txt"
+    filePath_ = ThisWorkbook.Path & "\" & RemoveExtension(ThisWorkbook.Name) & ".log"
 End Sub
 
 ' -----------------------------------------------------------------------------
@@ -111,7 +111,7 @@ End Sub
 ' -----------------------------------------------------------------------------
 ' このオブジェクトの名称を取得します。
 ' -----------------------------------------------------------------------------
-Private Property Get IAppender_Name() As String
+Public Property Get IAppender_Name() As String
     IAppender_Name = name_
 End Property
 ' -----------------------------------------------------------------------------

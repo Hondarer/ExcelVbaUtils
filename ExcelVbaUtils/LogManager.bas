@@ -51,37 +51,54 @@ Option Explicit
 
 #Const ENABLE_TEST_METHODS = 1
 
+' デフォルトの Logger を保持します。
 Private defaultLogger As ILog
 
+' カテゴリ別の Logger を保持します。
 Private loggers As Object
 
+' -----------------------------------------------------------------------------
+' デフォルトの Logger を取得します｡
+' <OUT> ILog デフォルトの Logger。
+' -----------------------------------------------------------------------------
 Public Function GetDefaultLogger() As ILog
     
     If defaultLogger Is Nothing Then
         Set defaultLogger = New LoggerCore
-'        Debug.Print "new LoggerCore created."
     End If
     
     Set GetDefaultLogger = defaultLogger
 
 End Function
 
+' -----------------------------------------------------------------------------
+' カテゴリ別の Logger のイニシャルチェックを行います。
+' -----------------------------------------------------------------------------
 Private Sub InitLoggers()
     If loggers Is Nothing Then
         Set loggers = CreateObject("Scripting.Dictionary")
     End If
 End Sub
 
-Public Function ClearLoggers()
+' -----------------------------------------------------------------------------
+' カテゴリ別の Logger を初期化します。
+' -----------------------------------------------------------------------------
+Public Sub ClearLoggers()
     Call InitLoggers
     Call loggers.RemoveAll
-End Function
+End Sub
 
+' -----------------------------------------------------------------------------
+' カテゴリ別の Logger を登録します。
+' -----------------------------------------------------------------------------
 Public Sub RegistLogger(key As String, logger As ILog)
     Call InitLoggers
     Call loggers.Add(key, logger)
 End Sub
 
+' -----------------------------------------------------------------------------
+' カテゴリ別の Logger を取り出します。
+' -----------------------------------------------------------------------------
 Public Function GetLogger(key As String) As ILog
     Call InitLoggers
     If Not loggers.Exists(key) Then

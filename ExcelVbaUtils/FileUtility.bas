@@ -83,3 +83,49 @@ Public Function FileExists(fileName As String) As Boolean
 
 End Function
 
+' -----------------------------------------------------------------------------
+' ファイル名の拡張子部分を返します。
+' <IN> filePath As String 対象のファイルパス。
+' <OUT> String ピリオドを含む拡張子部分。ピリオドが見つからない場合は、空文字。
+' -----------------------------------------------------------------------------
+Public Function GetExtension(filePath As String) As String
+
+    If InStr(filePath, ".") = 0 Then
+        Exit Function
+    End If
+    
+    If InStrRev(filePath, ".") < InStrRev(filePath, "\") Then
+        ' フルパスで、上位のフォルダ名にピリオドが含まれている場合
+        Exit Function
+    End If
+
+    GetExtension = Mid(filePath, InStrRev(filePath, "."))
+
+End Function
+
+' -----------------------------------------------------------------------------
+' ファイル名の拡張子を除いた部分を返します｡
+' <IN> filePath As String 対象のファイルパス。
+' <OUT> String 拡張子を取り除いたファイルパス。ピリオドが見つからない場合は、入力をそのまま返します。
+' -----------------------------------------------------------------------------
+Public Function RemoveExtension(filePath As String) As String
+
+    RemoveExtension = Left(filePath, Len(filePath) - Len(GetExtension(filePath)))
+
+End Function
+
+#If ENABLE_TEST_METHODS = 1 Then
+
+Public Sub RemoveExtensionTest()
+    Debug.Print GetExtension("aaa.txt")
+    Debug.Print RemoveExtension("aaa.txt")
+    Debug.Print GetExtension("bbb")
+    Debug.Print RemoveExtension("bbb")
+    Debug.Print GetExtension(".\ccc.txt")
+    Debug.Print RemoveExtension(".\ccc.txt")
+    Debug.Print GetExtension(".\ddd")
+    Debug.Print RemoveExtension(".\ddd")
+End Sub
+
+#End If
+

@@ -49,6 +49,9 @@ Option Explicit
 
 ' Dependency: None
 
+' -----------------------------------------------------------------------------
+' ログレベルの列挙を定義します｡
+' -----------------------------------------------------------------------------
 Public Enum LogLevel
     LvlDebug = 0
     LvlInfo = 1
@@ -57,6 +60,11 @@ Public Enum LogLevel
     LvlFatal = 4
 End Enum
 
+' -----------------------------------------------------------------------------
+' LogLevel を文字列に変換します｡
+' <IN> loglevel_ As LogLevel 対象の LogLevel。
+' <OUT> String LogLevel を表す文字列。
+' -----------------------------------------------------------------------------
 Public Function GetLogLevelString(loglevel_ As LogLevel) As String
     Select Case loglevel_
         Case LvlDebug

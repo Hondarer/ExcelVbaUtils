@@ -57,20 +57,26 @@ Option Explicit
 
 ' Dependency: TimeUtility
 
+' タイムスタンプを保持します。
 Dim timeStamp_ As String
 
+' ログレベルを保持します。
 Dim loglevel_ As LogLevel
 
+' コンピューター名を保持します。
 Dim machineName_ As String
 
+' 端末名を保持します。
 Dim clientName_ As String
 
+' ドメイン名を含むユーザー名を保持します。
 Dim userDomainAndName_ As String
 
+' メッセージを保持します。
 Dim message_ As String
 
 ' -----------------------------------------------------------------------------
-' CLoggingEvent の新しいインスタンスを初期化します。
+' CLoggingEvent クラスの新しいインスタンスを初期化します。
 ' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
     timeStamp_ = LocalNowToString(LONGTIME_WITH_MSEC)
