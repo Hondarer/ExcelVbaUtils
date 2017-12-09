@@ -9,8 +9,8 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 ' -----------------------------------------------------------------------------
-' ExcelChildProcessController
-' https://github.com/Hondarer/ExcelChildProcessController
+' ExcelVbaUtils
+' https://github.com/Hondarer/ExcelVbaUtils
 ' -----------------------------------------------------------------------------
 ' MIT License
 '

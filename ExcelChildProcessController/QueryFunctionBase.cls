@@ -9,8 +9,8 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 ' -----------------------------------------------------------------------------
-' ExcelChildProcessController
-' https://github.com/Hondarer/ExcelChildProcessController
+' ExcelVbaUtils
+' https://github.com/Hondarer/ExcelVbaUtils
 ' -----------------------------------------------------------------------------
 ' MIT License
 '
@@ -267,10 +267,6 @@ End Function
 ' コールバック対象のオブジェクトを指定して機能を実行します。
 ' -----------------------------------------------------------------------------
 Public Function ExecuteWithCallbackObject(callbackObject As IProcessControlCallbacks) As Long
-    
-    ' 大量データを参照する際には、デバッグ出力による性能低下が無視できないので
-    ' デバッグ出力を無効にする
-    controller.DisableIoTrace = True
     
     ' [username]/[passowrd]@[tlsname]
     ExecuteWithCallbackObject = controller.ExecuteProcess("sqlplus.exe " & username_ & "/" & password_ & "@" & tlsname_, callbackObject)

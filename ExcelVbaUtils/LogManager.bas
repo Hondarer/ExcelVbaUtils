@@ -52,10 +52,10 @@ Option Explicit
 #Const ENABLE_TEST_METHODS = 1
 
 ' フォールバック用の Logger を保持します。
-Private fallbackLogger As ILog
+Private fallbackLogger_ As ILog
 
 ' デフォルトの Logger を保持します。
-Private defaultLogger As ILog
+Private defaultLogger_ As ILog
 
 ' カテゴリ別の Logger を保持します。
 Private loggers As Object
@@ -66,23 +66,24 @@ Private loggers As Object
 ' -----------------------------------------------------------------------------
 Public Function GetDefaultLogger() As ILog
     
-    If defaultLogger Is Nothing Then
-        If fallbackLogger Is Nothing Then
-            Set fallbackLogger = New fallbackLogger
+    If defaultLogger_ Is Nothing Then
+        If fallbackLogger_ Is Nothing Then
+            Set fallbackLogger_ = New FallbackLogger
+        Else
+            Set GetDefaultLogger = fallbackLogger_
         End If
-        Set GetDefaultLogger = fallbackLogger
         Exit Function
     End If
     
-    Set GetDefaultLogger = defaultLogger
+    Set GetDefaultLogger = defaultLogger_
 
 End Function
 
 ' -----------------------------------------------------------------------------
 ' デフォルトの Logger を設定します｡
 ' -----------------------------------------------------------------------------
-Public Sub SetDefaultLogger(defaultLogger_ As ILog)
-    Set defaultLogger = defaultLogger_
+Public Sub SetDefaultLogger(defaultLogger__ As ILog)
+    Set defaultLogger_ = defaultLogger__
 End Sub
 
 ' -----------------------------------------------------------------------------

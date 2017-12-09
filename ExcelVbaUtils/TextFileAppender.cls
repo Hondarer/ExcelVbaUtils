@@ -81,7 +81,7 @@ Private lotationKind_ As TextFileAppender_LotationKind
 ' -----------------------------------------------------------------------------
 Private Sub Class_Initialize()
     name_ = "TextFileAppender"
-    filePath_ = ThisWorkbook.Path & "\" & RemoveExtension(ThisWorkbook.Name) & ".log"
+    filePath_ = ThisWorkbook.path & "\" & RemoveExtension(ThisWorkbook.Name) & ".log"
     lotationKind_ = Monthly
 End Sub
 

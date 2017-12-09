@@ -1,8 +1,8 @@
 Attribute VB_Name = "PInvoke"
 Option Explicit
 ' -----------------------------------------------------------------------------
-' ExcelChildProcessController
-' https://github.com/Hondarer/ExcelChildProcessController
+' ExcelVbaUtils
+' https://github.com/Hondarer/ExcelVbaUtils
 ' -----------------------------------------------------------------------------
 ' MIT License
 '
@@ -63,6 +63,14 @@ Public Const STD_OUTPUT_HANDLE = -11&
 Public Const STD_ERROR_HANDLE = -12&
 
 Public Const STILL_ACTIVE = &H103
+
+Public Const NO_ERROR = 0
+Public Const ERROR_PATH_NOT_FOUND = 3
+Public Const ERROR_FILE_EXISTS = 80
+Public Const ERROR_BAD_PATHNAME = 161
+Public Const ERROR_ALREADY_EXISTS = 183
+Public Const ERROR_FILENAME_EXCED_RANGE = 206
+Public Const ERROR_CANCELLED = 1223
 
 Public Const EXIT_FAILURE = 1
 
@@ -203,5 +211,15 @@ Public Declare Sub GetLocalTime Lib "kernel32" ( _
 Public Declare Sub OutputDebugString Lib "kernel32" Alias "OutputDebugStringA" ( _
     ByVal lpOutputString As String)
 
+Public Declare Function SetCurrentDirectory Lib "kernel32" Alias "SetCurrentDirectoryA" ( _
+    ByVal CurrentDir As String) As Long
+
+Public Declare Function SHCreateDirectoryEx Lib "shell32" Alias "SHCreateDirectoryExA" ( _
+    ByVal hwnd As Long, _
+    ByVal pszPath As String, _
+    ByVal psa As Long) As Long
+
+Public Declare Function PathIsDirectory Lib "SHLWAPI.DLL" Alias "PathIsDirectoryA" ( _
+    ByVal pszPath As String) As Boolean
 
 
