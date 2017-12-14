@@ -119,38 +119,38 @@ End Function
 
 ' -----------------------------------------------------------------------------
 ' ワークブックからのパスを、絶対パスに変換します。
-' <IN> path As String ワークブックからの相対パスか、絶対パス。
+' <IN> workbookPath As String ワークブックからの相対パスか、絶対パス。
 ' <OUT> String 解決された絶対パス。
 ' -----------------------------------------------------------------------------
-Public Function GetAbsolutePathNameFromThisWorkbookPath(path As String) As String
+Public Function GetAbsolutePathNameFromThisWorkbookPath(workbookPath As String) As String
 
     ' カレントディレクトリをブックのパスに設定する
-    Call SetCurrentDirectory(ThisWorkbook.path)
+    Call SetCurrentDirectory(ThisWorkbook.Path)
     ' パス名を解決する
     If fso Is Nothing Then
         Set fso = CreateObject("Scripting.FileSystemObject")
     End If
-    GetAbsolutePathNameFromThisWorkbookPath = fso.GetAbsolutePathName(path)
+    GetAbsolutePathNameFromThisWorkbookPath = fso.GetAbsolutePathName(workbookPath)
 
 End Function
 
 ' -----------------------------------------------------------------------------
 ' 指定されたサブフォルダーが存在するかチェックし、
 ' 存在しない場合は作成します。
-' <IN> チェックするフォルダのパス。論理パスの場合はカレントディレクトリのカレントフォルダを基準にします。
+' <IN> dirPath As String チェックするフォルダのパス。論理パスの場合はカレントディレクトリのカレントフォルダを基準にします。
 ' <OUT> Boolean ディレクトリが存在するか、作成に成功した場合は True。作成に失敗した場合は False。True の場合でも、出力に失敗する可能性があるため、出力時のエラーチェックは必ず実施してください。
 ' -----------------------------------------------------------------------------
-Public Function TryMakeDir(path As String) As Boolean
+Public Function TryMakeDir(dirPath As String) As Boolean
     
     Dim rtc As Long
     
     ' すでに目的のフォルダがあるか
-    If PathIsDirectory(path) = True Then
+    If PathIsDirectory(dirPath) = True Then
         TryMakeDir = True
         Exit Function
     End If
     
-    rtc = SHCreateDirectoryEx(0&, path, 0&)
+    rtc = SHCreateDirectoryEx(0&, dirPath, 0&)
     
     ' 正常に作成できた場合 NO_ERROR(0)
     ' 途中がファイルで再帰作成に失敗した場合 ERROR_PATH_NOT_FOUND(3)
@@ -162,7 +162,7 @@ Public Function TryMakeDir(path As String) As Boolean
     End If
     
     ' 最終階層がファイルの場合などを想定して、API で最終チェック
-    TryMakeDir = PathIsDirectory(path)
+    TryMakeDir = PathIsDirectory(dirPath)
 
 End Function
 

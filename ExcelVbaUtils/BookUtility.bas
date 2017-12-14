@@ -109,7 +109,7 @@ Public Function SaveAsWorkBook(book As Workbook, filePath As String, fileName As
 
     ' ƒpƒX‚ğÈ—ª‚µ‚½ê‡‚Ìˆ—
     If filePath = "" Then
-        filePath = ThisWorkbook.path
+        filePath = ThisWorkbook.Path
     End If
 
     If FolderExists(filePath & "\" & fileName) = True Then

@@ -415,7 +415,7 @@ Public Function ExecuteProcess(commandLine As String, func As IProcessControlCal
 
     ' プロセス起動
     If CreateProcess(vbNullString, commandLine, ByVal 0&, ByVal 0&, 1&, _
-        NORMAL_PRIORITY_CLASS, ByVal 0&, ThisWorkbook.path, udtStartInfo, udtProcInfo) = 0 Then
+        NORMAL_PRIORITY_CLASS, ByVal 0&, ThisWorkbook.Path, udtStartInfo, udtProcInfo) = 0 Then
         Call MsgBox("プロセスの生成に失敗しました。エラーコード:" & Err.LastDllError & vbCrLf & commandLine, Buttons:=vbCritical, Title:="エラー")
         GetDefaultLogger.LogFatal "[ProcessController][ExecuteProcess] プロセスの生成に失敗しました Err.LastDllError=" & Err.LastDllError
         GoTo Error
