@@ -386,6 +386,7 @@ Private Sub IProcessControlCallbacks_OnRecieveLineFromStdout(sender As ProcessCo
                 ' ‘€ì‚Ì—\–ñ
                 sender.SendLineToStdin "set linesize 32767"
                 sender.SendLineToStdin "set head off"
+                sender.SendLineToStdin "set tab off"
                 sender.SendLineToStdin "set newpage 0"
                 sender.SendLineToStdin "set feedback off"
                 
